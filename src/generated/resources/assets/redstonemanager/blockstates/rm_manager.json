@@ -1,0 +1,7 @@
+{
+  "variants": {
+    "": {
+      "model": "redstonemanager:block/rm_manager"
+    }
+  }
+}

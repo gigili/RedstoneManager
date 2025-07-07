@@ -1,0 +1,12 @@
+{
+  "item.redstonemanager.rm_linker": "Linker",
+  "block.redstonemanager.rm_manager": "Redstone Manager",
+
+  "creativetab.redstonemanager.rm_items_tab": "Redstone Manager Items",
+  "creativetab.redstonemanager.rm_blocks_tab": "Redstone Manager Blocks",
+
+  "tooltip.redstonemanager.rm_linker.right_click": "Right click on a block to clear connection",
+  "tooltip.redstonemanager.rm_linker.shift_right_click": "Crouch + right click a block to link",
+  "message.redstonemanager.connection_cleared": "Connection cleared",
+  "tooltip.redstonemanager.rm_linker.linked_to": "Linked to: %s"
+}
