@@ -1,12 +1,14 @@
 package dev.igorilic.redstonemanager;
 
 import dev.igorilic.redstonemanager.block.ModBlocks;
+import dev.igorilic.redstonemanager.block.entity.ModBlockEntities;
 import dev.igorilic.redstonemanager.component.ModDataComponents;
 import dev.igorilic.redstonemanager.item.ModCreativeModTabs;
 import dev.igorilic.redstonemanager.item.ModItemProperties;
 import dev.igorilic.redstonemanager.item.ModItems;
+import dev.igorilic.redstonemanager.screen.ModMenuTypes;
+import dev.igorilic.redstonemanager.screen.custom.ManagerScreen;
 import dev.igorilic.redstonemanager.util.RMLogger;
-import net.minecraft.client.Minecraft;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.bus.api.SubscribeEvent;
@@ -16,6 +18,7 @@ import net.neoforged.fml.common.Mod;
 import net.neoforged.fml.config.ModConfig;
 import net.neoforged.fml.event.lifecycle.FMLClientSetupEvent;
 import net.neoforged.fml.event.lifecycle.FMLCommonSetupEvent;
+import net.neoforged.neoforge.client.event.RegisterMenuScreensEvent;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.server.ServerStartingEvent;
 
@@ -40,6 +43,10 @@ public class RedstoneManager {
 
         // Register DataComponent
         ModDataComponents.register(modEventBus);
+
+        ModBlockEntities.register(modEventBus);
+
+        ModMenuTypes.register(modEventBus);
 
 
         // Register ourselves for server and other game events we are interested in.
@@ -69,6 +76,11 @@ public class RedstoneManager {
         @SubscribeEvent
         public static void onClientSetup(FMLClientSetupEvent event) {
             ModItemProperties.addCustomItemProperties();
+        }
+
+        @SubscribeEvent
+        public static void registerScreens(RegisterMenuScreensEvent event) {
+            event.register(ModMenuTypes.MANAGER_MENU.get(), ManagerScreen::new);
         }
     }
 }

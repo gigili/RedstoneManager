@@ -8,5 +8,8 @@
   "tooltip.redstonemanager.rm_linker.right_click": "Right click on a block to clear connection",
   "tooltip.redstonemanager.rm_linker.shift_right_click": "Crouch + right click a block to link",
   "message.redstonemanager.connection_cleared": "Connection cleared",
-  "tooltip.redstonemanager.rm_linker.linked_to": "Linked to: %s"
+  "tooltip.redstonemanager.rm_linker.linked_to": "Linked to: %s",
+  "gui.redstonemanager.settings_menu": "Settings",
+  "gui.redstonemanager.row_menu": "Row",
+  "gui.redstonemanager.manager": "Redstone Manager"
 }
