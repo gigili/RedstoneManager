@@ -4,9 +4,10 @@ import dev.igorilic.redstonemanager.RedstoneManager;
 import dev.igorilic.redstonemanager.block.entity.RedstoneManagerBlockEntity;
 import dev.igorilic.redstonemanager.component.ModDataComponents;
 import dev.igorilic.redstonemanager.item.custom.RedstoneLinkerItem;
-import dev.igorilic.redstonemanager.network.PacketToggleLever;
+import dev.igorilic.redstonemanager.network.*;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
+import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
@@ -16,37 +17,90 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.LeverBlock;
 import net.minecraft.world.level.block.state.BlockState;
+import org.jetbrains.annotations.NotNull;
 
 public class ManagerScreen extends AbstractContainerScreen<ManagerMenu> {
     private static final ResourceLocation GUI_TEXTURE =
-            ResourceLocation.fromNamespaceAndPath(RedstoneManager.MOD_ID, "textures/gui/single_slot.png");
+            ResourceLocation.fromNamespaceAndPath(RedstoneManager.MOD_ID, "textures/gui/single_slot_extended.png");
 
     private Button toggleButton;
     private RedstoneManagerBlockEntity blockEntity;
+    private EditBox channelNameField;
+    private Button addChannelButton;
+    private Button nextChannelButton;
+    private Button prevChannelButton;
 
     public ManagerScreen(ManagerMenu menu, Inventory playerInventory, Component title) {
         super(menu, playerInventory, title);
         this.blockEntity = menu.blockEntity;
+        imageHeight = 193;
     }
 
     @Override
     protected void init() {
         super.init();
 
-        int buttonX = this.leftPos + 10;
-        int buttonY = this.topPos + 50;
+        int buttonX = this.leftPos + 7;
+        int buttonY = this.topPos + 34;
 
         this.toggleButton = Button.builder(
-                        getButtonText(),
+                        getButtonText(false),
                         this::onToggleButtonPress
                 )
-                .bounds(buttonX, buttonY, 60, 20)
+                .bounds(buttonX, buttonY, 60, 18)
                 .build();
 
         this.addRenderableWidget(this.toggleButton);
+
+        // Channel name input
+        channelNameField = new EditBox(font, leftPos + 90, topPos + 68, 80, 16, Component.literal("Channel Name"));
+        channelNameField.setMaxLength(16);
+        addRenderableWidget(channelNameField);
+
+        // Channel buttons
+        addChannelButton = Button.builder(Component.literal("Add Channel"),
+                        button -> addChannel())
+                .bounds(channelNameField.getX(), topPos + 88, 80, 20)
+                .build();
+        addRenderableWidget(addChannelButton);
+
+        prevChannelButton = Button.builder(Component.literal("<"),
+                        button -> selectChannel(-1))
+                .bounds(leftPos + 7, topPos + 88, 20, 20)
+                .build();
+        addRenderableWidget(prevChannelButton);
+
+        nextChannelButton = Button.builder(Component.literal(">"),
+                        button -> selectChannel(1))
+                .bounds(leftPos + 37, topPos + 88, 20, 20)
+                .build();
+        addRenderableWidget(nextChannelButton);
     }
 
-    private Component getButtonText() {
+
+    private void addChannel() {
+        String name = channelNameField.getValue();
+        if (!name.isEmpty()) {
+            minecraft.getConnection().send(new PacketAddChannel(blockEntity.getBlockPos(), name));
+            channelNameField.setValue("");
+        }
+    }
+
+    private void selectChannel(int direction) {
+        int newIndex = menu.getSelectedChannel() + direction;
+        minecraft.getConnection().send(new PacketSelectChannel(blockEntity.getBlockPos(), newIndex));
+    }
+
+    @Override
+    protected void renderLabels(GuiGraphics guiGraphics, int mouseX, int mouseY) {
+        super.renderLabels(guiGraphics, mouseX, mouseY);
+
+        // Render current channel name
+        String channelName = menu.getCurrentChannelName();
+        guiGraphics.drawString(font, "Channel: " + channelName, 90, 58, 0xFFFFFF, false);
+    }
+
+    private Component getButtonText(boolean isTooltip) {
         if (blockEntity == null || blockEntity.getLevel() == null) {
             return Component.translatable("errors.redstonemanager.manager.no_block_entity");
         }
@@ -68,7 +122,15 @@ public class ManagerScreen extends AbstractContainerScreen<ManagerMenu> {
 
         boolean isLeverOn = leverState.getValue(LeverBlock.POWERED);
 
-        return isLeverOn ? Component.translatable("tooltip.redstonemanager.manager.turn_off") : Component.translatable("tooltip.redstonemanager.manager.turn_on");
+        return getTranslatedLabel(isTooltip, isLeverOn);
+    }
+
+    private static @NotNull Component getTranslatedLabel(boolean isTooltip, boolean isLeverOn) {
+        if(!isTooltip){
+            return  isLeverOn ? Component.translatable("label.redstonemanager.manager.turn_off") : Component.translatable("label.redstonemanager.manager.turn_on");
+        }else{
+            return isLeverOn ? Component.translatable("tooltip.redstonemanager.manager.turn_off") : Component.translatable("tooltip.redstonemanager.manager.turn_on");
+        }
     }
 
     private void onToggleButtonPress(Button button) {
@@ -79,7 +141,7 @@ public class ManagerScreen extends AbstractContainerScreen<ManagerMenu> {
         minecraft.getConnection().send(packet);
 
         // Update button text optimistically
-        this.toggleButton.setMessage(getButtonText());
+        this.toggleButton.setMessage(getButtonText(false));
     }
 
     @Override
@@ -87,7 +149,7 @@ public class ManagerScreen extends AbstractContainerScreen<ManagerMenu> {
         super.containerTick();
         // Update button text periodically to reflect lever state changes
         if (this.toggleButton != null) {
-            this.toggleButton.setMessage(getButtonText());
+            this.toggleButton.setMessage(getButtonText(false));
         }
     }
 
@@ -126,12 +188,12 @@ public class ManagerScreen extends AbstractContainerScreen<ManagerMenu> {
         super.renderTooltip(guiGraphics, mouseX, mouseY);
 
         // Check if mouse is over the linker item slot
-        if (isHovering(79, 34, 16, 16, mouseX, mouseY)) { // Adjust coordinates to match your slot
+        if (isHovering(79, 35, 16, 16, mouseX, mouseY)) { // Adjust coordinates to match your slot
             ItemStack stack = menu.getLinkerItem();
             if (!stack.isEmpty() && stack.getItem() instanceof RedstoneLinkerItem) {
                 guiGraphics.renderTooltip(
                         font,
-                        getButtonText(),
+                        getButtonText(true),
                         mouseX, mouseY - 12
                 );
             }
@@ -140,8 +202,7 @@ public class ManagerScreen extends AbstractContainerScreen<ManagerMenu> {
 
     @Override
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
-        // Check if clicked on linker item slot
-        if (isHovering(79, 34, 16, 16, mouseX, mouseY)) { // Adjust coordinates to match your slot
+        if (isHovering(80, 35, 16, 16, mouseX, mouseY) && button == 1) { // Adjust coordinates to match your slot
             ItemStack stack = menu.getLinkerItem();
             if (!stack.isEmpty() && stack.getItem() instanceof RedstoneLinkerItem &&
                     stack.get(ModDataComponents.COORDINATES) != null) {
@@ -152,7 +213,6 @@ public class ManagerScreen extends AbstractContainerScreen<ManagerMenu> {
         }
         return super.mouseClicked(mouseX, mouseY, button);
     }
-
 
     @Override
     public void render(GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {

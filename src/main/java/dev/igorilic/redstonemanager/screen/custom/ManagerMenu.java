@@ -14,6 +14,10 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.neoforged.neoforge.items.SlotItemHandler;
 
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+
 public class ManagerMenu extends AbstractContainerMenu {
     public final RedstoneManagerBlockEntity blockEntity;
     private final Level level;
@@ -93,18 +97,40 @@ public class ManagerMenu extends AbstractContainerMenu {
     private void addPlayerInventory(Inventory playerInventory) {
         for (int i = 0; i < 3; ++i) {
             for (int l = 0; l < 9; ++l) {
-                this.addSlot(new Slot(playerInventory, l + i * 9 + 9, 8 + l * 18, 84 + i * 18));
+                this.addSlot(new Slot(playerInventory, l + i * 9 + 9, 8 + l * 18, 112 + i * 18));
             }
         }
     }
 
     private void addPlayerHotbar(Inventory playerInventory) {
         for (int i = 0; i < 9; ++i) {
-            this.addSlot(new Slot(playerInventory, i, 8 + i * 18, 142));
+            this.addSlot(new Slot(playerInventory, i, 8 + i * 18, 170));
         }
     }
 
     public ItemStack getLinkerItem() {
         return this.blockEntity.inventory.getStackInSlot(0);
+    }
+
+    public List<RedstoneManagerBlockEntity.Channel> getChannels() {
+        return blockEntity.getChannels();
+    }
+
+    public List<ItemStack> getCurrentChannelItems() {
+        if (blockEntity.getChannels().isEmpty()) {
+            return Collections.emptyList();
+        }
+        return new ArrayList<>(blockEntity.getChannels().get(blockEntity.getSelectedChannel()).linkers());
+    }
+
+    public String getCurrentChannelName() {
+        if (blockEntity.getChannels().isEmpty()) {
+            return "No Channels";
+        }
+        return blockEntity.getChannels().get(blockEntity.getSelectedChannel()).name();
+    }
+
+    public int getSelectedChannel() {
+        return blockEntity.getSelectedChannel();
     }
 }

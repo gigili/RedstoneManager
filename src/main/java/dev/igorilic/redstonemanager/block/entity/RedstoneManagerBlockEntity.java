@@ -6,6 +6,8 @@ import dev.igorilic.redstonemanager.screen.custom.ManagerMenu;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.ListTag;
+import net.minecraft.nbt.Tag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.protocol.Packet;
 import net.minecraft.network.protocol.game.ClientGamePacketListener;
@@ -29,8 +31,86 @@ import net.neoforged.neoforge.items.ItemStackHandler;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.Optional;
+
 public class RedstoneManagerBlockEntity extends BlockEntity implements MenuProvider {
     public final ContainerData data;
+
+    private final List<Channel> channels = new ArrayList<>();
+    private int selectedChannel = 0;
+
+    public int getSelectedChannel() {
+        return selectedChannel;
+    }
+
+    public List<Channel> getChannels() {
+        return channels;
+    }
+
+    public record Channel(String name, List<ItemStack> linkers) {
+        public Channel {
+            linkers = List.copyOf(linkers); // Make immutable
+        }
+
+        public Channel(String name) {
+            this(name, new ArrayList<>());
+        }
+    }
+
+    // Channel management methods
+    public void addChannel(String name) {
+        channels.add(new Channel(name));
+        setChanged();
+    }
+
+    public void selectChannel(int index) {
+        if (index >= 0 && index < channels.size()) {
+            selectedChannel = index;
+            setChanged();
+        }
+    }
+
+    // Add this method to get linkers from current channel
+    public List<ItemStack> getCurrentChannelLinkers() {
+        if (channels.isEmpty()) return Collections.emptyList();
+        return new ArrayList<>(channels.get(selectedChannel).linkers());
+    }
+
+    // Updated method to add linker to current channel
+    public void addLinkerToCurrentChannel(ItemStack linker) {
+        if (channels.isEmpty()) return;
+
+        Channel current = channels.get(selectedChannel);
+        List<ItemStack> newLinkers = new ArrayList<>(current.linkers());
+        newLinkers.add(linker.copy());
+        channels.set(selectedChannel, new Channel(current.name(), newLinkers));
+        setChanged();
+    }
+
+    public void toggleAllLeversInChannel(int index){
+        toggleCurrentChannelLevers();
+    }
+
+    // Method to toggle all levers in current channel
+    public void toggleCurrentChannelLevers() {
+        if (level == null || level.isClientSide || channels.isEmpty()) return;
+
+        Channel channel = channels.get(selectedChannel);
+        for (ItemStack linker : channel.linkers()) {
+            BlockPos leverPos = linker.get(ModDataComponents.COORDINATES);
+            if (leverPos != null) {
+                BlockState state = level.getBlockState(leverPos);
+                if (state.is(Blocks.LEVER)) {
+                    boolean isPowered = state.getValue(LeverBlock.POWERED);
+                    level.setBlock(leverPos, state.setValue(LeverBlock.POWERED, !isPowered), Block.UPDATE_ALL);
+                    level.playSound(null, leverPos, SoundEvents.LEVER_CLICK, SoundSource.BLOCKS, 0.3F, isPowered ? 0.5F : 0.6F);
+                }
+            }
+        }
+    }
 
     public RedstoneManagerBlockEntity(BlockPos pos, BlockState blockState) {
         super(ModBlockEntities.MANAGER_BE.get(), pos, blockState);
@@ -83,12 +163,44 @@ public class RedstoneManagerBlockEntity extends BlockEntity implements MenuProvi
     protected void saveAdditional(@NotNull CompoundTag tag, HolderLookup.@NotNull Provider registries) {
         super.saveAdditional(tag, registries);
         tag.put("inventory", inventory.serializeNBT(registries));
+
+        ListTag channelsTag = new ListTag();
+        for (Channel channel : channels) {
+            CompoundTag channelTag = new CompoundTag();
+            channelTag.putString("Name", channel.name());
+
+            ListTag linkersTag = new ListTag();
+            for (ItemStack linker : channel.linkers()) {
+                linkersTag.add(linker.save(registries));
+            }
+            channelTag.put("Linkers", linkersTag);
+
+            channelsTag.add(channelTag);
+        }
+        tag.put("Channels", channelsTag);
+        tag.putInt("SelectedChannel", selectedChannel);
     }
 
     @Override
     protected void loadAdditional(@NotNull CompoundTag tag, HolderLookup.@NotNull Provider registries) {
         super.loadAdditional(tag, registries);
         inventory.deserializeNBT(registries, tag.getCompound("inventory"));
+
+        channels.clear();
+        ListTag channelsTag = tag.getList("Channels", Tag.TAG_COMPOUND);
+        for (Tag t : channelsTag) {
+            CompoundTag channelTag = (CompoundTag)t;
+            String name = channelTag.getString("Name");
+
+            ListTag linkersTag = channelTag.getList("Linkers", Tag.TAG_COMPOUND);
+            List<ItemStack> linkers = new ArrayList<>();
+            for (Tag linkerTag : linkersTag) {
+                linkers.add(ItemStack.parseOptional(registries, (CompoundTag)linkerTag));
+            }
+
+            channels.add(new Channel(name, linkers));
+        }
+        selectedChannel = tag.getInt("SelectedChannel");
     }
 
     @Override
