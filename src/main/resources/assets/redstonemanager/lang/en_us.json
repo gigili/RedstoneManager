@@ -7,6 +7,18 @@
 
   "tooltip.redstonemanager.rm_linker.right_click": "Right click on a block to clear connection",
   "tooltip.redstonemanager.rm_linker.shift_right_click": "Crouch + right click a block to link",
+  "tooltip.redstonemanager.rm_linker.click_to_toggle_lever": "Click to toggle linked lever",
+  "tooltip.redstonemanager.rm_linker.linked_to": "Linked to: %s",
+
   "message.redstonemanager.connection_cleared": "Connection cleared",
-  "tooltip.redstonemanager.rm_linker.linked_to": "Linked to: %s"
+  "message.redstonemanager.manager.insert_linker": "Insert Linker",
+
+  "gui.redstonemanager.manager": "Redstone Manager",
+
+  "errors.redstonemanager.manager.no_block_entity": "No BlockEntity",
+  "errors.redstonemanager.manager.not_linked": "Not Linked",
+  "errors.redstonemanager.manager.invalid_link": "Invalid Link",
+
+  "tooltip.redstonemanager.manager.turn_off": "Turn Off",
+  "tooltip.redstonemanager.manager.turn_on": "Turn On"
 }
