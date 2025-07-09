@@ -2,17 +2,12 @@ package dev.igorilic.redstonemanager.block.custom;
 
 import com.mojang.serialization.MapCodec;
 import dev.igorilic.redstonemanager.block.entity.RedstoneManagerBlockEntity;
-import dev.igorilic.redstonemanager.screen.custom.ManagerMenu;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
-import net.minecraft.world.ItemInteractionResult;
 import net.minecraft.world.SimpleMenuProvider;
 import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.inventory.ContainerData;
-import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.BaseEntityBlock;
@@ -29,7 +24,6 @@ import org.jetbrains.annotations.Nullable;
 public class RedstoneManagerBlock extends BaseEntityBlock {
     public static final VoxelShape SHAPE = Block.box(0.0D, 0.0D, 0.0D, 16.0D, 16.0D, 16.0D);
     public static final MapCodec<RedstoneManagerBlock> CODEC = simpleCodec(RedstoneManagerBlock::new);
-
 
     public RedstoneManagerBlock(Properties properties) {
         super(properties);
@@ -69,16 +63,10 @@ public class RedstoneManagerBlock extends BaseEntityBlock {
     @Override
     public @NotNull InteractionResult useWithoutItem(@NotNull BlockState blockState, Level level, @NotNull BlockPos pos, @NotNull Player player, @NotNull BlockHitResult hit) {
         if (!level.isClientSide()) {
-
-            RedstoneManagerBlockEntity storageItemPanelBlockEntity = (RedstoneManagerBlockEntity) level.getBlockEntity(pos);
-
-            if (storageItemPanelBlockEntity instanceof RedstoneManagerBlockEntity) {
-                ContainerData data = storageItemPanelBlockEntity.data;
-                player.openMenu(new SimpleMenuProvider(
-                        (windowId, playerInventory, playerEntity) -> new ManagerMenu(windowId, playerInventory, pos, data),
-                        Component.translatable("gui.redstonemanager.manager")), (buf -> buf.writeBlockPos(pos)));
+            if (level.getBlockEntity(pos) instanceof RedstoneManagerBlockEntity blockEntity) {
+                ((ServerPlayer) player).openMenu(new SimpleMenuProvider(blockEntity, Component.translatable("gui.redstonemanager.manager")), pos);
+                return InteractionResult.SUCCESS;
             }
-            return InteractionResult.SUCCESS;
         }
         return InteractionResult.FAIL;
     }

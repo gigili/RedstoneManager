@@ -1,68 +1,37 @@
 package dev.igorilic.redstonemanager.screen.custom;
 
-import com.google.common.graph.Network;
 import dev.igorilic.redstonemanager.block.ModBlocks;
+import dev.igorilic.redstonemanager.block.entity.RedstoneManagerBlockEntity;
 import dev.igorilic.redstonemanager.screen.ModMenuTypes;
-import net.minecraft.core.BlockPos;
 import net.minecraft.network.FriendlyByteBuf;
-import net.minecraft.network.chat.Component;
-import net.minecraft.world.SimpleMenuProvider;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.inventory.*;
+import net.minecraft.world.inventory.AbstractContainerMenu;
+import net.minecraft.world.inventory.ContainerLevelAccess;
+import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
-import org.jetbrains.annotations.NotNull;
-
-import java.security.Permission;
-import java.util.List;
-import java.util.Set;
+import net.minecraft.world.level.block.entity.BlockEntity;
+import net.neoforged.neoforge.items.SlotItemHandler;
 
 public class ManagerMenu extends AbstractContainerMenu {
-    List<ItemStack> itemStacks = List.of();
-    private Level level;
-    private ContainerData data;
-    private Player player;
-    private BlockPos blockPos;
+    public final RedstoneManagerBlockEntity blockEntity;
+    private final Level level;
 
-    public ManagerMenu(int containerID, Inventory inventory, FriendlyByteBuf extraData) {
-        this(containerID, inventory, extraData.readBlockPos(), new SimpleContainerData(1));
+    public ManagerMenu(int containerId, Inventory inv, FriendlyByteBuf extraData) {
+        this(containerId, inv, inv.player.level().getBlockEntity(extraData.readBlockPos()));
     }
 
-    public ManagerMenu(int containerID, Inventory inventory, BlockPos blockPos, ContainerData data) {
-        super(ModMenuTypes.MANAGER_MENU.get(), containerID);
-        this.player = inventory.player;
-        this.blockPos = blockPos;
-        this.level = inventory.player.level();
-        this.data = data;
+    public ManagerMenu(int containerId, Inventory inv, BlockEntity blockEntity) {
+        super(ModMenuTypes.MANAGER_MENU.get(), containerId);
+        this.blockEntity = ((RedstoneManagerBlockEntity) blockEntity);
+        this.level = inv.player.level();
 
-        addPlayerInventory(inventory);
-        addPlayerHotbar(inventory);
+        addPlayerInventory(inv);
+        addPlayerHotbar(inv);
 
-        addDataSlots(data);
-
+        this.addSlot(new SlotItemHandler(this.blockEntity.inventory, 0, 80, 35));
     }
-/*
-    List<ItemStack> getNetworkItems() {
-        return networkHolder.getNetwork()
-                .getItemDevices()
-                .filter(device -> device.isValidDevice() && device.canExtract(DeviceType.ITEM))
-                .map(ItemDevice::getItemHandler)
-                .filter(Objects::nonNull)
-                .map(handler -> {
-                    List<ItemStack> stacks = new ArrayList<>();
-
-                    for (int slot = 0; slot < handler.getSlots(); slot++) {
-                        stacks.add(handler.getStackInSlot(slot).copy());
-                    }
-
-                    return stacks;
-                })
-                .flatMap(List::stream)
-                .filter(item -> !item.isEmpty())
-                .toList();
-    }
-    */
 
     // CREDIT GOES TO: diesieben07 | https://github.com/diesieben07/SevenCommons
     // must assign a slot number to each of the slots used by the GUI.
@@ -80,36 +49,62 @@ public class ManagerMenu extends AbstractContainerMenu {
     private static final int TE_INVENTORY_FIRST_SLOT_INDEX = VANILLA_FIRST_SLOT_INDEX + VANILLA_SLOT_COUNT;
 
     // THIS YOU HAVE TO DEFINE!
-    private static final int TE_INVENTORY_SLOT_COUNT = 3;  // must be the number of slots you have!
+    private static final int TE_INVENTORY_SLOT_COUNT = 1;  // must be the number of slots you have!
 
     @Override
-    public boolean clickMenuButton(Player player, int id) {
-        return super.clickMenuButton(player, id);
+    public ItemStack quickMoveStack(Player playerIn, int pIndex) {
+        Slot sourceSlot = slots.get(pIndex);
+        if (sourceSlot == null || !sourceSlot.hasItem()) return ItemStack.EMPTY;  //EMPTY_ITEM
+        ItemStack sourceStack = sourceSlot.getItem();
+        ItemStack copyOfSourceStack = sourceStack.copy();
+
+        // Check if the slot clicked is one of the vanilla container slots
+        if (pIndex < VANILLA_FIRST_SLOT_INDEX + VANILLA_SLOT_COUNT) {
+            // This is a vanilla container slot so merge the stack into the tile inventory
+            if (!moveItemStackTo(sourceStack, TE_INVENTORY_FIRST_SLOT_INDEX, TE_INVENTORY_FIRST_SLOT_INDEX
+                    + TE_INVENTORY_SLOT_COUNT, false)) {
+                return ItemStack.EMPTY;  // EMPTY_ITEM
+            }
+        } else if (pIndex < TE_INVENTORY_FIRST_SLOT_INDEX + TE_INVENTORY_SLOT_COUNT) {
+            // This is a TE slot so merge the stack into the players inventory
+            if (!moveItemStackTo(sourceStack, VANILLA_FIRST_SLOT_INDEX, VANILLA_FIRST_SLOT_INDEX + VANILLA_SLOT_COUNT, false)) {
+                return ItemStack.EMPTY;
+            }
+        } else {
+            System.out.println("Invalid slotIndex:" + pIndex);
+            return ItemStack.EMPTY;
+        }
+        // If stack size == 0 (the entire stack was moved) set slot contents to null
+        if (sourceStack.getCount() == 0) {
+            sourceSlot.set(ItemStack.EMPTY);
+        } else {
+            sourceSlot.setChanged();
+        }
+        sourceSlot.onTake(playerIn, sourceStack);
+        return copyOfSourceStack;
     }
 
     @Override
-    public ItemStack quickMoveStack(Player playerIn, int index) {
-        return ItemStack.EMPTY;
+    public boolean stillValid(Player player) {
+        return stillValid(ContainerLevelAccess.create(level, blockEntity.getBlockPos()),
+                player, ModBlocks.RM_MANAGER_BLOCK.get());
     }
 
-    @Override
-    public boolean stillValid(@NotNull Player player) {
-        return stillValid(ContainerLevelAccess.create(player.level(), blockPos), player, ModBlocks.RM_MANAGER_BLOCK.get());
-    }
-
-    public void addPlayerInventory(Inventory playerInventory) {
+    private void addPlayerInventory(Inventory playerInventory) {
         for (int i = 0; i < 3; ++i) {
             for (int l = 0; l < 9; ++l) {
-                this.addSlot(new Slot(playerInventory, l + i * 9 + 9, 8 + l * 18 + 17, 36 + (ManagerScreen.visibleRows * 18) + i * 18));
+                this.addSlot(new Slot(playerInventory, l + i * 9 + 9, 8 + l * 18, 84 + i * 18));
             }
         }
     }
 
-    public void addPlayerHotbar(Inventory playerInventory) {
+    private void addPlayerHotbar(Inventory playerInventory) {
         for (int i = 0; i < 9; ++i) {
-            this.addSlot(new Slot(playerInventory, i, 8 + i * 18 + 17, 94  + (ManagerScreen.visibleRows * 18) ));
+            this.addSlot(new Slot(playerInventory, i, 8 + i * 18, 142));
         }
     }
 
-    public record ItemList(List<ItemStack> stacks) {}
+    public ItemStack getLinkerItem() {
+        return this.blockEntity.inventory.getStackInSlot(0);
+    }
 }

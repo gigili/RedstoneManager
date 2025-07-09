@@ -6,6 +6,7 @@ import dev.igorilic.redstonemanager.component.ModDataComponents;
 import dev.igorilic.redstonemanager.item.ModCreativeModTabs;
 import dev.igorilic.redstonemanager.item.ModItemProperties;
 import dev.igorilic.redstonemanager.item.ModItems;
+import dev.igorilic.redstonemanager.network.PacketHandler;
 import dev.igorilic.redstonemanager.screen.ModMenuTypes;
 import dev.igorilic.redstonemanager.screen.custom.ManagerScreen;
 import dev.igorilic.redstonemanager.util.RMLogger;
@@ -47,6 +48,8 @@ public class RedstoneManager {
         ModBlockEntities.register(modEventBus);
 
         ModMenuTypes.register(modEventBus);
+
+        PacketHandler.register(modEventBus);
 
 
         // Register ourselves for server and other game events we are interested in.
