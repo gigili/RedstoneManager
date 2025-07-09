@@ -32,9 +32,7 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
-import java.util.Optional;
 
 public class RedstoneManagerBlockEntity extends BlockEntity implements MenuProvider {
     public final ContainerData data;
@@ -73,45 +71,6 @@ public class RedstoneManagerBlockEntity extends BlockEntity implements MenuProvi
         }
     }
 
-    // Add this method to get linkers from current channel
-    public List<ItemStack> getCurrentChannelLinkers() {
-        if (channels.isEmpty()) return Collections.emptyList();
-        return new ArrayList<>(channels.get(selectedChannel).linkers());
-    }
-
-    // Updated method to add linker to current channel
-    public void addLinkerToCurrentChannel(ItemStack linker) {
-        if (channels.isEmpty()) return;
-
-        Channel current = channels.get(selectedChannel);
-        List<ItemStack> newLinkers = new ArrayList<>(current.linkers());
-        newLinkers.add(linker.copy());
-        channels.set(selectedChannel, new Channel(current.name(), newLinkers));
-        setChanged();
-    }
-
-    public void toggleAllLeversInChannel(int index){
-        toggleCurrentChannelLevers();
-    }
-
-    // Method to toggle all levers in current channel
-    public void toggleCurrentChannelLevers() {
-        if (level == null || level.isClientSide || channels.isEmpty()) return;
-
-        Channel channel = channels.get(selectedChannel);
-        for (ItemStack linker : channel.linkers()) {
-            BlockPos leverPos = linker.get(ModDataComponents.COORDINATES);
-            if (leverPos != null) {
-                BlockState state = level.getBlockState(leverPos);
-                if (state.is(Blocks.LEVER)) {
-                    boolean isPowered = state.getValue(LeverBlock.POWERED);
-                    level.setBlock(leverPos, state.setValue(LeverBlock.POWERED, !isPowered), Block.UPDATE_ALL);
-                    level.playSound(null, leverPos, SoundEvents.LEVER_CLICK, SoundSource.BLOCKS, 0.3F, isPowered ? 0.5F : 0.6F);
-                }
-            }
-        }
-    }
-
     public RedstoneManagerBlockEntity(BlockPos pos, BlockState blockState) {
         super(ModBlockEntities.MANAGER_BE.get(), pos, blockState);
 
@@ -142,7 +101,7 @@ public class RedstoneManagerBlockEntity extends BlockEntity implements MenuProvi
         protected void onContentsChanged(int slot) {
             setChanged();
             if (!level.isClientSide()) {
-                level.sendBlockUpdated(getBlockPos(), getBlockState(), getBlockState(), 3);
+                level.sendBlockUpdated(getBlockPos(), getBlockState(), getBlockState(), Block.UPDATE_ALL);
             }
         }
     };
@@ -189,13 +148,13 @@ public class RedstoneManagerBlockEntity extends BlockEntity implements MenuProvi
         channels.clear();
         ListTag channelsTag = tag.getList("Channels", Tag.TAG_COMPOUND);
         for (Tag t : channelsTag) {
-            CompoundTag channelTag = (CompoundTag)t;
+            CompoundTag channelTag = (CompoundTag) t;
             String name = channelTag.getString("Name");
 
             ListTag linkersTag = channelTag.getList("Linkers", Tag.TAG_COMPOUND);
             List<ItemStack> linkers = new ArrayList<>();
             for (Tag linkerTag : linkersTag) {
-                linkers.add(ItemStack.parseOptional(registries, (CompoundTag)linkerTag));
+                linkers.add(ItemStack.parseOptional(registries, (CompoundTag) linkerTag));
             }
 
             channels.add(new Channel(name, linkers));

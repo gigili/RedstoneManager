@@ -4,7 +4,9 @@ import dev.igorilic.redstonemanager.RedstoneManager;
 import dev.igorilic.redstonemanager.block.entity.RedstoneManagerBlockEntity;
 import dev.igorilic.redstonemanager.component.ModDataComponents;
 import dev.igorilic.redstonemanager.item.custom.RedstoneLinkerItem;
-import dev.igorilic.redstonemanager.network.*;
+import dev.igorilic.redstonemanager.network.PacketAddChannel;
+import dev.igorilic.redstonemanager.network.PacketSelectChannel;
+import dev.igorilic.redstonemanager.network.PacketToggleLever;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.EditBox;
@@ -18,6 +20,9 @@ import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.LeverBlock;
 import net.minecraft.world.level.block.state.BlockState;
 import org.jetbrains.annotations.NotNull;
+import org.lwjgl.glfw.GLFW;
+
+import java.util.Objects;
 
 public class ManagerScreen extends AbstractContainerScreen<ManagerMenu> {
     private static final ResourceLocation GUI_TEXTURE =
@@ -97,7 +102,11 @@ public class ManagerScreen extends AbstractContainerScreen<ManagerMenu> {
 
         // Render current channel name
         String channelName = menu.getCurrentChannelName();
-        guiGraphics.drawString(font, "Channel: " + channelName, 90, 58, 0xFFFFFF, false);
+        if (!Objects.equals(channelName, "No Channels")) {
+            guiGraphics.drawString(font, "Channel: " + channelName, 90, 58, 0xFFFFFF, false);
+        } else {
+            guiGraphics.drawString(font, channelName, 90, 58, 0xFFFFFF, false);
+        }
     }
 
     private Component getButtonText(boolean isTooltip) {
@@ -218,5 +227,20 @@ public class ManagerScreen extends AbstractContainerScreen<ManagerMenu> {
     public void render(GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
         super.render(guiGraphics, mouseX, mouseY, partialTick);
         this.renderTooltip(guiGraphics, mouseX, mouseY);
+    }
+
+    @Override
+    public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
+        if (keyCode == GLFW.GLFW_KEY_ESCAPE) {
+            return super.keyPressed(keyCode, scanCode, modifiers);
+        }
+
+        if (channelNameField.isFocused()) {
+            if (channelNameField.keyPressed(keyCode, scanCode, modifiers) || channelNameField.canConsumeInput()) {
+                return true;
+            }
+        }
+
+        return super.keyPressed(keyCode, scanCode, modifiers);
     }
 }

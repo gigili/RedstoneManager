@@ -36,7 +36,7 @@ public record PacketAddLinkerToChannel(BlockPos managerPos, ItemStack linker, in
         context.enqueueWork(() -> {
             if (context.player() instanceof ServerPlayer player) {
                 if (player.level().getBlockEntity(payload.managerPos()) instanceof RedstoneManagerBlockEntity be) {
-                    be.addLinkerToCurrentChannel(payload.linker());
+                    //be.addLinkerToCurrentChannel(payload.linker());
                     be.setChanged();
                     player.level().sendBlockUpdated(be.getBlockPos(), be.getBlockState(), be.getBlockState(), 3);
                 }

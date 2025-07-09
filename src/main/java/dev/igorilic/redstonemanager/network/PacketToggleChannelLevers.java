@@ -31,7 +31,7 @@ public record PacketToggleChannelLevers(BlockPos managerPos, int channelIndex) i
     public static void handle(PacketToggleChannelLevers payload, IPayloadContext context) {
         if (context.player() instanceof net.minecraft.server.level.ServerPlayer player) {
             if (player.level().getBlockEntity(payload.managerPos()) instanceof RedstoneManagerBlockEntity be) {
-                be.toggleAllLeversInChannel(payload.channelIndex());
+                //be.toggleAllLeversInChannel(payload.channelIndex());
                 be.setChanged();
                 player.level().sendBlockUpdated(be.getBlockPos(), be.getBlockState(), be.getBlockState(), 3);
             }
