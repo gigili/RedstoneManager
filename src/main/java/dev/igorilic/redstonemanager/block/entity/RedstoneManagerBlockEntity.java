@@ -1,6 +1,5 @@
 package dev.igorilic.redstonemanager.block.entity;
 
-import dev.igorilic.redstonemanager.component.ModDataComponents;
 import dev.igorilic.redstonemanager.item.custom.RedstoneLinkerItem;
 import dev.igorilic.redstonemanager.screen.custom.ManagerMenu;
 import net.minecraft.core.BlockPos;
@@ -12,154 +11,81 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.network.protocol.Packet;
 import net.minecraft.network.protocol.game.ClientGamePacketListener;
 import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
-import net.minecraft.sounds.SoundEvents;
-import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.Containers;
 import net.minecraft.world.MenuProvider;
 import net.minecraft.world.SimpleContainer;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
-import net.minecraft.world.inventory.ContainerData;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.Block;
-import net.minecraft.world.level.block.Blocks;
-import net.minecraft.world.level.block.LeverBlock;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
-import net.neoforged.neoforge.items.ItemStackHandler;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 public class RedstoneManagerBlockEntity extends BlockEntity implements MenuProvider {
-    public final ContainerData data;
-
-    private final List<Channel> channels = new ArrayList<>();
-    private int selectedChannel = 0;
-
-    public int getSelectedChannel() {
-        return selectedChannel;
-    }
-
-    public List<Channel> getChannels() {
-        return channels;
-    }
-
-    public record Channel(String name, List<ItemStack> linkers) {
-        public Channel {
-            linkers = List.copyOf(linkers); // Make immutable
-        }
-
-        public Channel(String name) {
-            this(name, new ArrayList<>());
-        }
-    }
-
-    // Channel management methods
-    public void addChannel(String name) {
-        channels.add(new Channel(name));
-        setChanged();
-    }
-
-    public void selectChannel(int index) {
-        if (index >= 0 && index < channels.size()) {
-            selectedChannel = index;
-            setChanged();
-        }
-    }
+    private final List<ItemStack> linkers = new ArrayList<>();
 
     public RedstoneManagerBlockEntity(BlockPos pos, BlockState blockState) {
         super(ModBlockEntities.MANAGER_BE.get(), pos, blockState);
-
-        this.data = new ContainerData() {
-            @Override
-            public int get(int index) {
-                return 0;
-            }
-
-            @Override
-            public void set(int index, int value) {
-            }
-
-            @Override
-            public int getCount() {
-                return 1;
-            }
-        };
     }
 
-    public final ItemStackHandler inventory = new ItemStackHandler(1) {
-        @Override
-        protected int getStackLimit(int slot, @NotNull ItemStack stack) {
-            return 1;
-        }
-
-        @Override
-        protected void onContentsChanged(int slot) {
+    public void addLinker(ItemStack linker) {
+        if (linker.getItem() instanceof RedstoneLinkerItem) {
+            linkers.add(linker.copy());
             setChanged();
-            if (!level.isClientSide()) {
+            if (level != null) {
                 level.sendBlockUpdated(getBlockPos(), getBlockState(), getBlockState(), Block.UPDATE_ALL);
             }
         }
-    };
-
-    public void clearContents() {
-        inventory.setStackInSlot(0, ItemStack.EMPTY);
     }
 
-    public void drops() {
-        SimpleContainer inv = new SimpleContainer(inventory.getSlots());
-        for (int i = 0; i < inventory.getSlots(); i++) {
-            inv.setItem(i, inventory.getStackInSlot(i));
+    public List<ItemStack> getLinkers() {
+        return Collections.unmodifiableList(linkers);
+    }
+
+    public void removeLinker(int index) {
+        if (index >= 0 && index < linkers.size()) {
+            linkers.remove(index);
+            setChanged();
+            if (level != null) {
+                level.sendBlockUpdated(getBlockPos(), getBlockState(), getBlockState(), Block.UPDATE_ALL);
+            }
         }
-        Containers.dropContents(level, worldPosition, inv);
     }
 
     @Override
     protected void saveAdditional(@NotNull CompoundTag tag, HolderLookup.@NotNull Provider registries) {
         super.saveAdditional(tag, registries);
-        tag.put("inventory", inventory.serializeNBT(registries));
-
-        ListTag channelsTag = new ListTag();
-        for (Channel channel : channels) {
-            CompoundTag channelTag = new CompoundTag();
-            channelTag.putString("Name", channel.name());
-
-            ListTag linkersTag = new ListTag();
-            for (ItemStack linker : channel.linkers()) {
-                linkersTag.add(linker.save(registries));
-            }
-            channelTag.put("Linkers", linkersTag);
-
-            channelsTag.add(channelTag);
+        ListTag linkersTag = new ListTag();
+        for (ItemStack linker : linkers) {
+            linkersTag.add(linker.save(registries));
         }
-        tag.put("Channels", channelsTag);
-        tag.putInt("SelectedChannel", selectedChannel);
+        tag.put("Linkers", linkersTag);
     }
 
     @Override
     protected void loadAdditional(@NotNull CompoundTag tag, HolderLookup.@NotNull Provider registries) {
         super.loadAdditional(tag, registries);
-        inventory.deserializeNBT(registries, tag.getCompound("inventory"));
-
-        channels.clear();
-        ListTag channelsTag = tag.getList("Channels", Tag.TAG_COMPOUND);
-        for (Tag t : channelsTag) {
-            CompoundTag channelTag = (CompoundTag) t;
-            String name = channelTag.getString("Name");
-
-            ListTag linkersTag = channelTag.getList("Linkers", Tag.TAG_COMPOUND);
-            List<ItemStack> linkers = new ArrayList<>();
-            for (Tag linkerTag : linkersTag) {
-                linkers.add(ItemStack.parseOptional(registries, (CompoundTag) linkerTag));
-            }
-
-            channels.add(new Channel(name, linkers));
+        linkers.clear();
+        ListTag linkersTag = tag.getList("Linkers", Tag.TAG_COMPOUND);
+        for (Tag t : linkersTag) {
+            linkers.add(ItemStack.parseOptional(registries, (CompoundTag) t));
         }
-        selectedChannel = tag.getInt("SelectedChannel");
+    }
+
+    // Update drops method:
+    public void drops() {
+        SimpleContainer inv = new SimpleContainer(linkers.size());
+        for (int i = 0; i < linkers.size(); i++) {
+            inv.setItem(i, linkers.get(i));
+        }
+        Containers.dropContents(level, worldPosition, inv);
     }
 
     @Override
@@ -183,7 +109,7 @@ public class RedstoneManagerBlockEntity extends BlockEntity implements MenuProvi
     }
 
     public void toggleLinkedLever() {
-        if (level == null || level.isClientSide) return;
+        /*if (level == null || level.isClientSide) return;
 
         ItemStack linkerItem = inventory.getStackInSlot(0);
         if (linkerItem.isEmpty() || !(linkerItem.getItem() instanceof RedstoneLinkerItem)) return;
@@ -196,6 +122,6 @@ public class RedstoneManagerBlockEntity extends BlockEntity implements MenuProvi
 
         boolean isLeverOn = leverState.getValue(LeverBlock.POWERED);
         level.setBlock(leverPos, leverState.setValue(LeverBlock.POWERED, !isLeverOn), Block.UPDATE_ALL);
-        level.playSound(null, leverPos, SoundEvents.LEVER_CLICK, SoundSource.BLOCKS, 0.3F, isLeverOn ? 0.5F : 0.6F);
+        level.playSound(null, leverPos, SoundEvents.LEVER_CLICK, SoundSource.BLOCKS, 0.3F, isLeverOn ? 0.5F : 0.6F);*/
     }
 }

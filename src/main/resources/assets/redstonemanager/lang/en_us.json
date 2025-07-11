@@ -18,9 +18,8 @@
   "errors.redstonemanager.manager.no_block_entity": "No BlockEntity",
   "errors.redstonemanager.manager.not_linked": "Not Linked",
   "errors.redstonemanager.manager.invalid_link": "Invalid Link",
-
-  "tooltip.redstonemanager.manager.turn_off": "Right click to turn Off",
-  "tooltip.redstonemanager.manager.turn_on": "Right click to turn On",
+  "tooltip.redstonemanager.manager.turn_off": "Right click to turn off",
+  "tooltip.redstonemanager.manager.turn_on": "Right click to turn on",
 
   "label.redstonemanager.manager.turn_off": "Turn Off",
   "label.redstonemanager.manager.turn_on": "Turn On"

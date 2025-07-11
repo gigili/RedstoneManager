@@ -1,246 +1,283 @@
 package dev.igorilic.redstonemanager.screen.custom;
 
+import com.mojang.blaze3d.systems.RenderSystem;
 import dev.igorilic.redstonemanager.RedstoneManager;
 import dev.igorilic.redstonemanager.block.entity.RedstoneManagerBlockEntity;
 import dev.igorilic.redstonemanager.component.ModDataComponents;
-import dev.igorilic.redstonemanager.item.custom.RedstoneLinkerItem;
-import dev.igorilic.redstonemanager.network.PacketAddChannel;
-import dev.igorilic.redstonemanager.network.PacketSelectChannel;
-import dev.igorilic.redstonemanager.network.PacketToggleLever;
+import dev.igorilic.redstonemanager.util.MousePositionManagerUtil;
+import dev.igorilic.redstonemanager.util.MouseUtil;
 import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.client.gui.components.Button;
-import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
+import net.minecraft.client.renderer.GameRenderer;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.util.Mth;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.LeverBlock;
 import net.minecraft.world.level.block.state.BlockState;
 import org.jetbrains.annotations.NotNull;
-import org.lwjgl.glfw.GLFW;
 
-import java.util.Objects;
+import java.util.List;
 
 public class ManagerScreen extends AbstractContainerScreen<ManagerMenu> {
-    private static final ResourceLocation GUI_TEXTURE =
-            ResourceLocation.fromNamespaceAndPath(RedstoneManager.MOD_ID, "textures/gui/single_slot_extended.png");
+    private static final ResourceLocation GUI_TEXTURE = ResourceLocation.fromNamespaceAndPath(RedstoneManager.MOD_ID, "textures/gui/gui_no_slots.png");
+    private static final ResourceLocation GUI_NO_SCROLL_TEXTURE = ResourceLocation.fromNamespaceAndPath(RedstoneManager.MOD_ID, "textures/gui/gui_no_scroll.png");
+    private static final ResourceLocation GUI_SCROLL_TEXTURE = ResourceLocation.fromNamespaceAndPath(RedstoneManager.MOD_ID, "textures/gui/gui_scroll.png");
+    private static final ResourceLocation GUI_ROW_TEXTURE = ResourceLocation.fromNamespaceAndPath(RedstoneManager.MOD_ID, "textures/gui/gui_row.png");
 
-    private Button toggleButton;
-    private RedstoneManagerBlockEntity blockEntity;
-    private EditBox channelNameField;
-    private Button addChannelButton;
-    private Button nextChannelButton;
-    private Button prevChannelButton;
+    private static final int SCROLLBAR_WIDTH = 12;
+    private static final int SCROLLBAR_X_OFFSET = 174; // adjust to fit GUI width
+    private static final int SCROLLBAR_Y_OFFSET = 18;
+    private static final int COLUMNS = 9;
+
+    private final RedstoneManagerBlockEntity blockEntity;
+    private final Inventory playerInventory;
+
+    private List<ItemStack> linkers;
+
+    private int scrollIndex = 0;
+    public static int visibleRows = 3;
+    private int itemsPerPage;
+
+    private boolean isDraggingScrollbar = false;
+    private int dragOffsetY = 0;
+
 
     public ManagerScreen(ManagerMenu menu, Inventory playerInventory, Component title) {
         super(menu, playerInventory, title);
+        MousePositionManagerUtil.setLastKnownPosition();
         this.blockEntity = menu.blockEntity;
-        imageHeight = 193;
+        this.playerInventory = playerInventory;
+        this.linkers = this.blockEntity.getLinkers();
+        this.itemsPerPage = visibleRows * COLUMNS;
+        this.imageHeight = 175 + (visibleRows - 3) * 18;
+        this.imageWidth = 209;
+        this.inventoryLabelY = this.imageHeight - 98;
     }
 
     @Override
     protected void init() {
         super.init();
 
-        int buttonX = this.leftPos + 7;
-        int buttonY = this.topPos + 34;
+        this.clearWidgets();
+        /*this.menu.slots.clear();
 
-        this.toggleButton = Button.builder(
-                        getButtonText(false),
-                        this::onToggleButtonPress
-                )
-                .bounds(buttonX, buttonY, 60, 18)
-                .build();
+        this.menu.addPlayerHotbar(playerInventory);
+        this.menu.addPlayerInventory(playerInventory);*/
 
-        this.addRenderableWidget(this.toggleButton);
-
-        // Channel name input
-        channelNameField = new EditBox(font, leftPos + 90, topPos + 68, 80, 16, Component.literal("Channel Name"));
-        channelNameField.setMaxLength(16);
-        addRenderableWidget(channelNameField);
-
-        // Channel buttons
-        addChannelButton = Button.builder(Component.literal("Add Channel"),
-                        button -> addChannel())
-                .bounds(channelNameField.getX(), topPos + 88, 80, 20)
-                .build();
-        addRenderableWidget(addChannelButton);
-
-        prevChannelButton = Button.builder(Component.literal("<"),
-                        button -> selectChannel(-1))
-                .bounds(leftPos + 7, topPos + 88, 20, 20)
-                .build();
-        addRenderableWidget(prevChannelButton);
-
-        nextChannelButton = Button.builder(Component.literal(">"),
-                        button -> selectChannel(1))
-                .bounds(leftPos + 37, topPos + 88, 20, 20)
-                .build();
-        addRenderableWidget(nextChannelButton);
-    }
-
-
-    private void addChannel() {
-        String name = channelNameField.getValue();
-        if (!name.isEmpty()) {
-            minecraft.getConnection().send(new PacketAddChannel(blockEntity.getBlockPos(), name));
-            channelNameField.setValue("");
-        }
-    }
-
-    private void selectChannel(int direction) {
-        int newIndex = menu.getSelectedChannel() + direction;
-        minecraft.getConnection().send(new PacketSelectChannel(blockEntity.getBlockPos(), newIndex));
+        this.linkers = this.blockEntity.getLinkers();
     }
 
     @Override
-    protected void renderLabels(GuiGraphics guiGraphics, int mouseX, int mouseY) {
-        super.renderLabels(guiGraphics, mouseX, mouseY);
-
-        // Render current channel name
-        String channelName = menu.getCurrentChannelName();
-        if (!Objects.equals(channelName, "No Channels")) {
-            guiGraphics.drawString(font, "Channel: " + channelName, 90, 58, 0xFFFFFF, false);
-        } else {
-            guiGraphics.drawString(font, channelName, 90, 58, 0xFFFFFF, false);
-        }
-    }
-
-    private Component getButtonText(boolean isTooltip) {
-        if (blockEntity == null || blockEntity.getLevel() == null) {
-            return Component.translatable("errors.redstonemanager.manager.no_block_entity");
-        }
-
-        ItemStack linkerItem = blockEntity.inventory.getStackInSlot(0);
-        if (linkerItem.isEmpty() || !(linkerItem.getItem() instanceof RedstoneLinkerItem)) {
-            return Component.translatable("message.redstonemanager.manager.insert_linker");
-        }
-
-        BlockPos leverPos = linkerItem.get(ModDataComponents.COORDINATES);
-        if (leverPos == null) {
-            return Component.translatable("errors.redstonemanager.manager.not_linked");
-        }
-
-        BlockState leverState = blockEntity.getLevel().getBlockState(leverPos);
-        if (!leverState.is(Blocks.LEVER)) {
-            return Component.translatable("errors.redstonemanager.manager.invalid_link");
-        }
-
-        boolean isLeverOn = leverState.getValue(LeverBlock.POWERED);
-
-        return getTranslatedLabel(isTooltip, isLeverOn);
-    }
-
-    private static @NotNull Component getTranslatedLabel(boolean isTooltip, boolean isLeverOn) {
-        if(!isTooltip){
-            return  isLeverOn ? Component.translatable("label.redstonemanager.manager.turn_off") : Component.translatable("label.redstonemanager.manager.turn_on");
-        }else{
-            return isLeverOn ? Component.translatable("tooltip.redstonemanager.manager.turn_off") : Component.translatable("tooltip.redstonemanager.manager.turn_on");
-        }
-    }
-
-    private void onToggleButtonPress(Button button) {
-        if (blockEntity == null || minecraft == null || minecraft.getConnection() == null) return;
-
-        // Create and send the packet
-        var packet = new PacketToggleLever(blockEntity.getBlockPos());
-        minecraft.getConnection().send(packet);
-
-        // Update button text optimistically
-        this.toggleButton.setMessage(getButtonText(false));
-    }
-
-    @Override
-    public void containerTick() {
-        super.containerTick();
-        // Update button text periodically to reflect lever state changes
-        if (this.toggleButton != null) {
-            this.toggleButton.setMessage(getButtonText(false));
-        }
+    public void onClose() {
+        super.onClose();
+        MousePositionManagerUtil.clear();
     }
 
     @Override
     protected void renderBg(GuiGraphics guiGraphics, float partialTick, int mouseX, int mouseY) {
-        int x = (width - imageWidth) / 2;
-        int y = (height - imageHeight) / 2;
-        guiGraphics.blit(GUI_TEXTURE, x, y, 0, 0, imageWidth, imageHeight, 256, 256);
+        RenderSystem.setShader(GameRenderer::getPositionTexShader);
+        RenderSystem.setShaderColor(1.0F, 1.0F, 1.0F, 1.0F);
+        RenderSystem.setShaderTexture(0, GUI_TEXTURE);
 
-        // Render colored background for linked item
-        renderLinkerItemBackground(guiGraphics, x, y);
-    }
+        int baseHeight = 72;
+        int tileHeight = 18;
+        int extraRows = visibleRows - 3;
 
-    private void renderLinkerItemBackground(GuiGraphics guiGraphics, int guiLeft, int guiTop) {
-        ItemStack linkerItem = menu.getLinkerItem();
-        if (!linkerItem.isEmpty() && linkerItem.getItem() instanceof RedstoneLinkerItem) {
-            BlockPos leverPos = linkerItem.get(ModDataComponents.COORDINATES);
-            if (leverPos != null) {
-                boolean isLeverOn = isLeverOn(leverPos);
-                int color = isLeverOn ? 0x7700FF00 : 0x77FF0000; // Green/Red with transparency
-                int slotX = guiLeft + 80; // Adjust to your slot position
-                int slotY = guiTop + 35;  // Adjust to your slot position
-                guiGraphics.fill(slotX, slotY, slotX + 16, slotY + 16, color);
-            }
+        int slotRowWidth = 162;
+        int slotRowHeight = 18;
+        int startX = leftPos + 8;
+        int startY = topPos + 19;
+
+        guiGraphics.blit(GUI_TEXTURE, leftPos, topPos, 0, 0, imageWidth, baseHeight);
+
+        int tileSourceX = 0;
+        int tileSourceY = 54;
+        int tileWidth = 209;
+
+        for (int i = 0; i < extraRows; i++) {
+            int drawY = topPos + baseHeight + (i * tileHeight);
+            guiGraphics.blit(GUI_TEXTURE, leftPos, drawY, tileSourceX, tileSourceY, tileWidth, tileHeight);
+        }
+
+        int bottomSourceY = baseHeight + tileHeight - 18;
+        int bottomDestY = topPos + baseHeight + (extraRows * tileHeight);
+        int bottomHeight = 101;
+
+        guiGraphics.blit(GUI_TEXTURE, leftPos, bottomDestY, 0, bottomSourceY, imageWidth, bottomHeight);
+
+        int scrollbarX = leftPos + SCROLLBAR_X_OFFSET + 1;
+        int scrollbarY = topPos + SCROLLBAR_Y_OFFSET;
+        int handleHeight = 15;
+        int maxScroll = Math.max(0, linkers.size() - itemsPerPage);
+        if (maxScroll > 0) {
+            float scrollPercent = scrollIndex / (float) maxScroll;
+            int handleY = scrollbarY + (int) ((getScrollbarHeight() - handleHeight) * scrollPercent);
+            guiGraphics.blit(GUI_SCROLL_TEXTURE, scrollbarX, handleY + 2, 168, 0, 12, handleHeight, 12, 15);
+        }
+
+        RenderSystem.setShaderTexture(0, GUI_ROW_TEXTURE); // Make sure to bind row texture
+        for (int i = 0; i < visibleRows; i++) {
+            int y = startY + (i * slotRowHeight);
+            guiGraphics.blit(GUI_ROW_TEXTURE, startX, y, 0, 0, slotRowWidth, slotRowHeight, slotRowWidth, slotRowHeight);
         }
     }
 
-    private boolean isLeverOn(BlockPos leverPos) {
+    private int getScrollbarHeight() {
+        return 18 * visibleRows;
+    }
+
+    @Override
+    public void render(@NotNull GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
+        super.render(guiGraphics, mouseX, mouseY, partialTick);
+        this.renderTooltip(guiGraphics, mouseX, mouseY);
+
+        int startX = leftPos + 9;
+        int startY = topPos + 20;
+
+        for (int i = 0; i < itemsPerPage; i++) {
+            int index = scrollIndex + i;
+            if (index >= linkers.size()) break;
+
+            ItemStack stack = linkers.get(index);
+
+            int row = i / COLUMNS;
+            int col = i % COLUMNS;
+
+            int x = startX + col * 18;
+            int y = startY + row * 18;
+
+            if (mouseX >= x && mouseX < x + 16 && mouseY >= y && mouseY < y + 16) {
+                BlockPos leverPos = stack.get(ModDataComponents.COORDINATES);
+                Component extraLabel = null;
+                if (leverPos == null) {
+                    extraLabel = Component.translatable("errors.redstonemanager.manager.not_linked");
+                } else if (blockEntity.getLevel() != null) {
+                    BlockState leverState = blockEntity.getLevel().getBlockState(leverPos);
+                    if (!leverState.is(Blocks.LEVER)) {
+                        extraLabel = Component.translatable("errors.redstonemanager.manager.invalid_link");
+                    } else {
+                        boolean isLeverOn = isLeverOn(stack);
+                        extraLabel = isLeverOn ? Component.translatable("tooltip.redstonemanager.manager.turn_off") : Component.translatable("tooltip.redstonemanager.manager.turn_on");
+                    }
+                }
+
+                if (extraLabel != null) {
+                    guiGraphics.renderTooltip(font, extraLabel, mouseX, mouseY - 12);
+                }
+                guiGraphics.renderTooltip(font, stack, mouseX, mouseY);
+            }
+
+            renderLinkerItemBackground(stack, guiGraphics, x, y);
+            guiGraphics.renderItem(stack, x, y);
+        }
+
+        renderTooltip(guiGraphics, mouseX, mouseY);
+    }
+
+    private void renderLinkerItemBackground(ItemStack linkerItem, GuiGraphics guiGraphics, int slotX, int slotY) {
+        boolean isLeverOn = isLeverOn(linkerItem);
+        int color = isLeverOn ? 0x7700FF00 : 0x77FF0000; // Green/Red with transparency
+        int slotSize = 16;
+        guiGraphics.fill(slotX, slotY, slotX + slotSize, slotY + slotSize, color);
+    }
+
+    private boolean isLeverOn(ItemStack stack) {
         if (minecraft == null || minecraft.level == null) return false;
+        BlockPos leverPos = stack.get(ModDataComponents.COORDINATES);
+        if (leverPos == null) return false;
         BlockState state = minecraft.level.getBlockState(leverPos);
         return state.is(Blocks.LEVER) && state.getValue(LeverBlock.POWERED);
     }
 
     @Override
-    protected void renderTooltip(GuiGraphics guiGraphics, int mouseX, int mouseY) {
-        super.renderTooltip(guiGraphics, mouseX, mouseY);
-
-        // Check if mouse is over the linker item slot
-        if (isHovering(79, 35, 16, 16, mouseX, mouseY)) { // Adjust coordinates to match your slot
-            ItemStack stack = menu.getLinkerItem();
-            if (!stack.isEmpty() && stack.getItem() instanceof RedstoneLinkerItem) {
-                guiGraphics.renderTooltip(
-                        font,
-                        getButtonText(true),
-                        mouseX, mouseY - 12
-                );
-            }
-        }
-    }
-
-    @Override
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
-        if (isHovering(80, 35, 16, 16, mouseX, mouseY) && button == 1) { // Adjust coordinates to match your slot
-            ItemStack stack = menu.getLinkerItem();
-            if (!stack.isEmpty() && stack.getItem() instanceof RedstoneLinkerItem &&
-                    stack.get(ModDataComponents.COORDINATES) != null) {
-                // Send toggle packet
-                minecraft.getConnection().send(new PacketToggleLever(blockEntity.getBlockPos()));
+        MousePositionManagerUtil.getLastKnownPosition();
+
+        int startX = leftPos + 25;
+        int startY = topPos + 20;
+        int slotSize = 18;
+
+        for (int i = 0; i < itemsPerPage; i++) {
+            int index = scrollIndex + i;
+
+            int row = i / COLUMNS;
+            int col = i % COLUMNS;
+            int x = startX + col * slotSize;
+            int y = startY + row * slotSize;
+
+            if (mouseX >= x && mouseX < x + 16 && mouseY >= y && mouseY < y + 16) {
+                if (index < linkers.size()) {
+                    ItemStack stack = linkers.get(index);
+                    if (!stack.isEmpty()) {
+                        /*assert Minecraft.getInstance().player != null;
+                        Minecraft.getInstance().player.connection.send(
+                                new PacketToggleLever(stack, ClickType.PICKUP.ordinal(), 0)
+                        );*/
+                    }
+                } else {
+                    // Clicked on empty slot - send packet with empty ItemStack or special action
+                }
                 return true;
             }
         }
+
+
+        // Handle scrollbar click
+        int scrollbarX = leftPos + SCROLLBAR_X_OFFSET + 1;
+        int scrollbarY = topPos + SCROLLBAR_Y_OFFSET;
+        int handleHeight = 15;
+        int maxScroll = Math.max(0, linkers.size() - itemsPerPage);
+        if (maxScroll > 0) {
+            float scrollPercent = scrollIndex / (float) maxScroll;
+            int handleY = scrollbarY + (int) ((getScrollbarHeight() - handleHeight) * scrollPercent);
+
+            if (MouseUtil.isMouseOver(mouseX, mouseY, scrollbarX, handleY, SCROLLBAR_WIDTH, handleHeight)) {
+                isDraggingScrollbar = true;
+                dragOffsetY = (int) mouseY - handleY;
+                return true;
+            } else {
+                isDraggingScrollbar = false;
+            }
+        }
+
         return super.mouseClicked(mouseX, mouseY, button);
     }
 
     @Override
-    public void render(GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
-        super.render(guiGraphics, mouseX, mouseY, partialTick);
-        this.renderTooltip(guiGraphics, mouseX, mouseY);
+    public boolean mouseDragged(double mouseX, double mouseY, int button, double dragX, double dragY) {
+        if (isDraggingScrollbar) {
+            int scrollbarY = topPos + SCROLLBAR_Y_OFFSET;
+            int handleHeight = 15;
+            int maxScroll = Math.max(0, linkers.size() - itemsPerPage);
+
+            int relativeY = (int) mouseY - scrollbarY - dragOffsetY;
+            float percent = Mth.clamp(relativeY / (float) (getScrollbarHeight() - handleHeight), 0.0F, 1.0F);
+
+            int rawIndex = (int) (percent * maxScroll);
+            scrollIndex = Mth.clamp((rawIndex / COLUMNS) * COLUMNS, 0, maxScroll);
+
+            return true;
+        }
+
+        return super.mouseDragged(mouseX, mouseY, button, dragX, dragY);
     }
 
     @Override
-    public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
-        if (keyCode == GLFW.GLFW_KEY_ESCAPE) {
-            return super.keyPressed(keyCode, scanCode, modifiers);
+    public boolean mouseScrolled(double mouseX, double mouseY, double scrollX, double scrollY) {
+        int maxScroll = Math.max(0, linkers.size() - itemsPerPage);
+        if (maxScroll > 0) {
+            // Scroll by whole rows
+            int newScrollIndex = scrollIndex - (int) scrollY * COLUMNS;
+            // Clamp within bounds
+            newScrollIndex = Mth.clamp(newScrollIndex, 0, maxScroll);
+            // Snap to multiple of COLUMNS (whole rows)
+            scrollIndex = (newScrollIndex / COLUMNS) * COLUMNS;
+            return true;
         }
-
-        if (channelNameField.isFocused()) {
-            if (channelNameField.keyPressed(keyCode, scanCode, modifiers) || channelNameField.canConsumeInput()) {
-                return true;
-            }
-        }
-
-        return super.keyPressed(keyCode, scanCode, modifiers);
+        return super.mouseScrolled(mouseX, mouseY, scrollX, scrollY);
     }
 }

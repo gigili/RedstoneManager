@@ -1,5 +1,6 @@
 package dev.igorilic.redstonemanager.network;
 
+import dev.igorilic.redstonemanager.RedstoneManager;
 import dev.igorilic.redstonemanager.block.entity.RedstoneManagerBlockEntity;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.FriendlyByteBuf;
@@ -10,8 +11,7 @@ import net.minecraft.server.level.ServerPlayer;
 import net.neoforged.neoforge.network.handling.IPayloadContext;
 
 public record PacketToggleLever(BlockPos managerPos) implements CustomPacketPayload {
-    public static final Type<PacketToggleLever> TYPE =
-            new Type<>(ResourceLocation.fromNamespaceAndPath("redstonemanager", "toggle_lever"));
+    public static final Type<PacketToggleLever> TYPE = new Type<>(ResourceLocation.fromNamespaceAndPath(RedstoneManager.MOD_ID, "toggle_lever"));
 
     public static final StreamCodec<FriendlyByteBuf, PacketToggleLever> STREAM_CODEC =
             StreamCodec.composite(

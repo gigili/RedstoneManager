@@ -20,29 +20,5 @@ public class PacketHandler {
                 PacketToggleLever.STREAM_CODEC,
                 new DirectionalPayloadHandler<>(PacketToggleLever::handle, PacketToggleLever::handle)
         );
-
-        registrar.playToServer(
-                PacketAddChannel.TYPE,
-                PacketAddChannel.STREAM_CODEC,
-                new DirectionalPayloadHandler<>(PacketAddChannel::handle, PacketAddChannel::handle)
-        );
-
-        registrar.playToServer(
-                PacketSelectChannel.TYPE,
-                PacketSelectChannel.STREAM_CODEC,
-                new DirectionalPayloadHandler<>(PacketSelectChannel::handle, PacketSelectChannel::handle)
-        );
-
-        registrar.playToServer(
-                PacketAddLinkerToChannel.TYPE,
-                PacketAddLinkerToChannel.STREAM_CODEC,
-                new DirectionalPayloadHandler<>(PacketAddLinkerToChannel::handle, PacketAddLinkerToChannel::handle)
-        );
-
-        registrar.playToServer(
-                PacketToggleChannelLevers.TYPE,
-                PacketToggleChannelLevers.STREAM_CODEC,
-                new DirectionalPayloadHandler<>(PacketToggleChannelLevers::handle, PacketToggleChannelLevers::handle)
-        );
     }
 }
