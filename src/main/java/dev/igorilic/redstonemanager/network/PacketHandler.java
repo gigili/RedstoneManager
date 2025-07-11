@@ -3,7 +3,6 @@ package dev.igorilic.redstonemanager.network;
 import dev.igorilic.redstonemanager.RedstoneManager;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.neoforge.network.event.RegisterPayloadHandlersEvent;
-import net.neoforged.neoforge.network.handling.DirectionalPayloadHandler;
 import net.neoforged.neoforge.network.registration.PayloadRegistrar;
 
 public class PacketHandler {
@@ -18,7 +17,13 @@ public class PacketHandler {
         registrar.playToServer(
                 PacketToggleLever.TYPE,
                 PacketToggleLever.STREAM_CODEC,
-                new DirectionalPayloadHandler<>(PacketToggleLever::handle, PacketToggleLever::handle)
+                PacketToggleLever.HANDLER
+        );
+
+        registrar.playToServer(
+                MenuInteractPacketC2S.TYPE,
+                MenuInteractPacketC2S.STREAM_CODEC,
+                MenuInteractPacketC2S.HANDLER
         );
     }
 }

@@ -4,10 +4,13 @@ import dev.igorilic.redstonemanager.block.ModBlocks;
 import dev.igorilic.redstonemanager.block.entity.RedstoneManagerBlockEntity;
 import dev.igorilic.redstonemanager.item.custom.RedstoneLinkerItem;
 import dev.igorilic.redstonemanager.screen.ModMenuTypes;
+import dev.igorilic.redstonemanager.util.Interact;
+import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
+import net.minecraft.world.inventory.ClickType;
 import net.minecraft.world.inventory.ContainerLevelAccess;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
@@ -15,9 +18,12 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import org.jetbrains.annotations.NotNull;
 
-public class ManagerMenu extends AbstractContainerMenu {
+import java.util.List;
+
+public class ManagerMenu extends AbstractContainerMenu implements Interact {
     public final RedstoneManagerBlockEntity blockEntity;
     private final Level level;
+    private final Inventory playerInventory;
 
     // CREDIT GOES TO: diesieben07 | https://github.com/diesieben07/SevenCommons
     // must assign a slot number to each of the slots used by the GUI.
@@ -45,15 +51,14 @@ public class ManagerMenu extends AbstractContainerMenu {
         super(ModMenuTypes.MANAGER_MENU.get(), containerId);
         this.blockEntity = ((RedstoneManagerBlockEntity) blockEntity);
         this.level = inv.player.level();
+        this.playerInventory = inv;
 
         addPlayerInventory(inv);
         addPlayerHotbar(inv);
-
-        //this.addSlot(new SlotItemHandler(this.blockEntity.inventory, 0, 80, 35));
     }
 
     @Override
-    public ItemStack quickMoveStack(Player playerIn, int pIndex) {
+    public @NotNull ItemStack quickMoveStack(@NotNull Player playerIn, int pIndex) {
         Slot sourceSlot = slots.get(pIndex);
         if (sourceSlot == null || !sourceSlot.hasItem()) return ItemStack.EMPTY;
 
@@ -96,5 +101,35 @@ public class ManagerMenu extends AbstractContainerMenu {
         for (int i = 0; i < 9; ++i) {
             this.addSlot(new Slot(playerInventory, i, 9 + i * 18, 148));
         }
+    }
+
+    @Override
+    public void clicked(ItemStack itemStack, CompoundTag extraData, ClickType clickType, int button) {
+        if (clickType == ClickType.PICKUP) {
+            if (getCarried().isEmpty() && itemStack != null) {
+                final var result = itemStack.copy();
+                if (!result.isEmpty()) {
+                    setCarried(result);
+                    blockEntity.removeLinker(findLinkerIndex(blockEntity.getLinkers(), itemStack));
+                }
+            }
+        } else if (clickType == ClickType.SWAP) {
+            if (!getCarried().isEmpty() && itemStack != null) {
+                final var result = getCarried().copy();
+                if (!result.isEmpty()) {
+                    setCarried(itemStack);
+                    blockEntity.swapLinker(findLinkerIndex(blockEntity.getLinkers(), itemStack), result);
+                }
+            }
+        }
+    }
+
+    public int findLinkerIndex(List<ItemStack> linkers, ItemStack target) {
+        for (int i = 0; i < linkers.size(); i++) {
+            if (ItemStack.isSameItemSameComponents(linkers.get(i), target)) {
+                return i;
+            }
+        }
+        return -1;
     }
 }

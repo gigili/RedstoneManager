@@ -1,5 +1,6 @@
 package dev.igorilic.redstonemanager.block.entity;
 
+import dev.igorilic.redstonemanager.component.ModDataComponents;
 import dev.igorilic.redstonemanager.item.custom.RedstoneLinkerItem;
 import dev.igorilic.redstonemanager.screen.custom.ManagerMenu;
 import net.minecraft.core.BlockPos;
@@ -11,6 +12,8 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.network.protocol.Packet;
 import net.minecraft.network.protocol.game.ClientGamePacketListener;
 import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
+import net.minecraft.sounds.SoundEvents;
+import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.Containers;
 import net.minecraft.world.MenuProvider;
 import net.minecraft.world.SimpleContainer;
@@ -19,6 +22,8 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.LeverBlock;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import org.jetbrains.annotations.NotNull;
@@ -37,7 +42,7 @@ public class RedstoneManagerBlockEntity extends BlockEntity implements MenuProvi
 
     public void addLinker(ItemStack linker) {
         if (linker.getItem() instanceof RedstoneLinkerItem) {
-            linkers.add(linker.copy());
+            linkers.add(linker);
             setChanged();
             if (level != null) {
                 level.sendBlockUpdated(getBlockPos(), getBlockState(), getBlockState(), Block.UPDATE_ALL);
@@ -56,6 +61,24 @@ public class RedstoneManagerBlockEntity extends BlockEntity implements MenuProvi
             if (level != null) {
                 level.sendBlockUpdated(getBlockPos(), getBlockState(), getBlockState(), Block.UPDATE_ALL);
             }
+        }
+    }
+
+    public void swapLinker(int index, ItemStack newLinker) {
+        if (index < 0 || index >= this.linkers.size()) {
+            return;
+        }
+
+        // Validate the new item is a linker
+        if (!(newLinker.getItem() instanceof RedstoneLinkerItem)) {
+            return;
+        }
+
+        this.linkers.set(index, newLinker.copy());
+        this.setChanged();
+
+        if (level != null) {
+            level.sendBlockUpdated(getBlockPos(), getBlockState(), getBlockState(), Block.UPDATE_ALL);
         }
     }
 
@@ -109,8 +132,8 @@ public class RedstoneManagerBlockEntity extends BlockEntity implements MenuProvi
     }
 
     public void toggleLinkedLever() {
-        /*if (level == null || level.isClientSide) return;
-
+        if (level == null || level.isClientSide) return;
+        /*
         ItemStack linkerItem = inventory.getStackInSlot(0);
         if (linkerItem.isEmpty() || !(linkerItem.getItem() instanceof RedstoneLinkerItem)) return;
 
@@ -123,5 +146,19 @@ public class RedstoneManagerBlockEntity extends BlockEntity implements MenuProvi
         boolean isLeverOn = leverState.getValue(LeverBlock.POWERED);
         level.setBlock(leverPos, leverState.setValue(LeverBlock.POWERED, !isLeverOn), Block.UPDATE_ALL);
         level.playSound(null, leverPos, SoundEvents.LEVER_CLICK, SoundSource.BLOCKS, 0.3F, isLeverOn ? 0.5F : 0.6F);*/
+    }
+
+    public void toggleLinkedLever(ItemStack stack) {
+        if (level == null || level.isClientSide) return;
+
+        BlockPos leverPos = stack.get(ModDataComponents.COORDINATES);
+        if (leverPos == null) return;
+
+        BlockState state = level.getBlockState(leverPos);
+        if (!state.is(Blocks.LEVER)) return;
+
+        boolean isLeverPowered = state.getValue(LeverBlock.POWERED);
+        level.setBlock(leverPos, state.setValue(LeverBlock.POWERED, !isLeverPowered), Block.UPDATE_ALL);
+        level.playSound(null, leverPos, SoundEvents.LEVER_CLICK, SoundSource.BLOCKS, 0.3F, isLeverPowered ? 0.5F : 0.6F);
     }
 }
