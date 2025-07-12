@@ -85,14 +85,14 @@ public class ManagerMenu extends AbstractContainerMenu implements Interact {
     public void addPlayerInventory(Inventory playerInventory) {
         for (int i = 0; i < 3; ++i) {
             for (int l = 0; l < 9; ++l) {
-                this.addSlot(new Slot(playerInventory, l + i * 9 + 9, 9 + l * 18, 90 + i * 18));
+                this.addSlot(new Slot(playerInventory, l + i * 9 + 9, 8 + l * 18, 160 + i * 18));
             }
         }
     }
 
     public void addPlayerHotbar(Inventory playerInventory) {
         for (int i = 0; i < 9; ++i) {
-            this.addSlot(new Slot(playerInventory, i, 9 + i * 18, 148));
+            this.addSlot(new Slot(playerInventory, i, 8 + i * 18, 218));
         }
     }
 

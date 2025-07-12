@@ -29,7 +29,7 @@ import org.lwjgl.glfw.GLFW;
 import java.util.List;
 
 public class ManagerScreen extends AbstractContainerScreen<ManagerMenu> {
-    private static final ResourceLocation GUI_TEXTURE = ResourceLocation.fromNamespaceAndPath(RedstoneManager.MOD_ID, "textures/gui/gui_no_slots.png");
+    private static final ResourceLocation GUI_TEXTURE = ResourceLocation.fromNamespaceAndPath(RedstoneManager.MOD_ID, "textures/gui/gui_no_slots_large.png");
     private static final ResourceLocation GUI_NO_SCROLL_TEXTURE = ResourceLocation.fromNamespaceAndPath(RedstoneManager.MOD_ID, "textures/gui/gui_no_scroll.png");
     private static final ResourceLocation GUI_SCROLL_TEXTURE = ResourceLocation.fromNamespaceAndPath(RedstoneManager.MOD_ID, "textures/gui/gui_scroll.png");
     private static final ResourceLocation GUI_ROW_TEXTURE = ResourceLocation.fromNamespaceAndPath(RedstoneManager.MOD_ID, "textures/gui/gui_row.png");
@@ -44,7 +44,7 @@ public class ManagerScreen extends AbstractContainerScreen<ManagerMenu> {
     private final List<ItemStack> linkers;
 
     private int scrollIndex = 0;
-    public static int visibleRows = 3;
+    public static int visibleRows = 7;
     private final int itemsPerPage;
 
     private boolean isDraggingScrollbar = false;
@@ -58,9 +58,9 @@ public class ManagerScreen extends AbstractContainerScreen<ManagerMenu> {
         this.blockEntity = menu.blockEntity;
         this.linkers = this.blockEntity.getLinkers();
         this.itemsPerPage = visibleRows * COLUMNS;
-        this.imageHeight = 175 + (visibleRows - 3) * 18;
+        this.imageHeight = 243;
         this.imageWidth = 209;
-        this.inventoryLabelY = this.imageHeight - 98;
+        this.inventoryLabelY = this.imageHeight - 96;
         this.playerInventory = playerInventory;
     }
 
@@ -86,33 +86,17 @@ public class ManagerScreen extends AbstractContainerScreen<ManagerMenu> {
         RenderSystem.setShaderColor(1.0F, 1.0F, 1.0F, 1.0F);
         RenderSystem.setShaderTexture(0, GUI_TEXTURE);
 
-        int baseHeight = 72;
-        int tileHeight = 18;
-        int extraRows = visibleRows - 3;
 
         int slotRowWidth = 162;
         int slotRowHeight = 18;
-        int startX = leftPos + 8;
-        int startY = topPos + 19;
+        int startX = leftPos + 7;
+        int startY = topPos + 17;
 
-        guiGraphics.blit(GUI_TEXTURE, leftPos, topPos, 0, 0, imageWidth, baseHeight);
+        int baseX = (width - imageWidth) / 2;
+        int baseY = (height - imageHeight) / 2;
+        guiGraphics.blit(GUI_TEXTURE, baseX, baseY, 0, 0, imageWidth, imageHeight, 256, 256);
 
-        int tileSourceX = 0;
-        int tileSourceY = 54;
-        int tileWidth = 209;
-
-        for (int i = 0; i < extraRows; i++) {
-            int drawY = topPos + baseHeight + (i * tileHeight);
-            guiGraphics.blit(GUI_TEXTURE, leftPos, drawY, tileSourceX, tileSourceY, tileWidth, tileHeight);
-        }
-
-        int bottomSourceY = baseHeight + tileHeight - 18;
-        int bottomDestY = topPos + baseHeight + (extraRows * tileHeight);
-        int bottomHeight = 101;
-
-        guiGraphics.blit(GUI_TEXTURE, leftPos, bottomDestY, 0, bottomSourceY, imageWidth, bottomHeight);
-
-        int scrollbarX = leftPos + SCROLLBAR_X_OFFSET + 1;
+        int scrollbarX = leftPos + SCROLLBAR_X_OFFSET;
         int scrollbarY = topPos + SCROLLBAR_Y_OFFSET;
         int handleHeight = 15;
 
@@ -121,7 +105,7 @@ public class ManagerScreen extends AbstractContainerScreen<ManagerMenu> {
         float scrollFraction = scrollIndex / (maxScroll * COLUMNS); // use total index range
 
         if (maxScroll > 0) {
-            int handleY = Math.max(scrollbarY + (int) ((scrollbarHeight - handleHeight) * scrollFraction), scrollbarY + 2);
+            int handleY = Math.max(scrollbarY + (int) ((scrollbarHeight - handleHeight) * scrollFraction), scrollbarY + 1);
             guiGraphics.blit(GUI_SCROLL_TEXTURE, scrollbarX, handleY, 168, 0, 12, handleHeight, 12, 15);
         }
 
@@ -133,7 +117,7 @@ public class ManagerScreen extends AbstractContainerScreen<ManagerMenu> {
     }
 
     private int getScrollbarHeight() {
-        return 18 * visibleRows;
+        return 18 * 3; // Was 18 * visibleRows, but we have scroll fixed to 3 rows height
     }
 
     @Override
@@ -141,8 +125,8 @@ public class ManagerScreen extends AbstractContainerScreen<ManagerMenu> {
         super.render(guiGraphics, mouseX, mouseY, partialTick);
         this.renderTooltip(guiGraphics, mouseX, mouseY);
 
-        int startX = leftPos + 9;
-        int startY = topPos + 20;
+        int startX = leftPos + 8;
+        int startY = topPos + 18;
 
         for (int i = 0; i < itemsPerPage; i++) {
             int index = scrollIndex + i;
@@ -201,7 +185,7 @@ public class ManagerScreen extends AbstractContainerScreen<ManagerMenu> {
 
     private void clampScrollIndex() {
         int totalRows = (linkers.size() + COLUMNS - 1) / COLUMNS;
-        int maxStartRow = Math.max(0, totalRows - 3);
+        int maxStartRow = Math.max(0, totalRows - visibleRows);
         int maxScrollIndex = maxStartRow * COLUMNS;
 
         scrollIndex = Mth.clamp(scrollIndex, 0, maxScrollIndex);
@@ -280,7 +264,7 @@ public class ManagerScreen extends AbstractContainerScreen<ManagerMenu> {
         if (isDraggingScrollbar) {
             int scrollbarY = topPos + SCROLLBAR_Y_OFFSET;
             int handleHeight = 15;
-            int maxScroll = Math.max(0, ((linkers.size() + COLUMNS - 1) / COLUMNS - 3) * COLUMNS);
+            int maxScroll = Math.max(0, ((linkers.size() + COLUMNS - 1) / COLUMNS - visibleRows) * COLUMNS);
 
             int relativeY = (int) mouseY - scrollbarY - dragOffsetY;
             float percent = Mth.clamp(relativeY / (float) (getScrollbarHeight() - handleHeight), 0.0F, 1.0F);
@@ -296,7 +280,7 @@ public class ManagerScreen extends AbstractContainerScreen<ManagerMenu> {
 
     @Override
     public boolean mouseScrolled(double mouseX, double mouseY, double scrollX, double scrollY) {
-        int maxScroll = Math.max(0, ((linkers.size() + COLUMNS - 1) / COLUMNS - 3) * COLUMNS);
+        int maxScroll = Math.max(0, ((linkers.size() + COLUMNS - 1) / COLUMNS - visibleRows) * COLUMNS);
         if (maxScroll > 0) {
             // Scroll by whole rows
             int newScrollIndex = scrollIndex - (int) scrollY * COLUMNS;
