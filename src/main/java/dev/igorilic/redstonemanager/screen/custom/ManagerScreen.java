@@ -30,7 +30,7 @@ import java.util.List;
 
 public class ManagerScreen extends AbstractContainerScreen<ManagerMenu> {
     private static final ResourceLocation GUI_TEXTURE = ResourceLocation.fromNamespaceAndPath(RedstoneManager.MOD_ID, "textures/gui/gui_no_slots_large.png");
-    private static final ResourceLocation GUI_NO_SCROLL_TEXTURE = ResourceLocation.fromNamespaceAndPath(RedstoneManager.MOD_ID, "textures/gui/gui_no_scroll.png");
+    private static final ResourceLocation GUI_NO_SCROLL_TEXTURE = ResourceLocation.fromNamespaceAndPath(RedstoneManager.MOD_ID, "textures/gui/gui_no_slots_no_scroll_large.png");
     private static final ResourceLocation GUI_SCROLL_TEXTURE = ResourceLocation.fromNamespaceAndPath(RedstoneManager.MOD_ID, "textures/gui/gui_scroll.png");
     private static final ResourceLocation GUI_ROW_TEXTURE = ResourceLocation.fromNamespaceAndPath(RedstoneManager.MOD_ID, "textures/gui/gui_row.png");
 
@@ -86,15 +86,14 @@ public class ManagerScreen extends AbstractContainerScreen<ManagerMenu> {
         RenderSystem.setShaderColor(1.0F, 1.0F, 1.0F, 1.0F);
         RenderSystem.setShaderTexture(0, GUI_TEXTURE);
 
+        int baseX = (width - imageWidth) / 2;
+        int baseY = (height - imageHeight) / 2;
+
 
         int slotRowWidth = 162;
         int slotRowHeight = 18;
         int startX = leftPos + 7;
         int startY = topPos + 17;
-
-        int baseX = (width - imageWidth) / 2;
-        int baseY = (height - imageHeight) / 2;
-        guiGraphics.blit(GUI_TEXTURE, baseX, baseY, 0, 0, imageWidth, imageHeight, 256, 256);
 
         int scrollbarX = leftPos + SCROLLBAR_X_OFFSET;
         int scrollbarY = topPos + SCROLLBAR_Y_OFFSET;
@@ -106,7 +105,10 @@ public class ManagerScreen extends AbstractContainerScreen<ManagerMenu> {
 
         if (maxScroll > 0) {
             int handleY = Math.max(scrollbarY + (int) ((scrollbarHeight - handleHeight) * scrollFraction), scrollbarY + 1);
+            guiGraphics.blit(GUI_TEXTURE, baseX, baseY, 0, 0, imageWidth, imageHeight, 256, 256);
             guiGraphics.blit(GUI_SCROLL_TEXTURE, scrollbarX, handleY, 168, 0, 12, handleHeight, 12, 15);
+        } else {
+            guiGraphics.blit(GUI_NO_SCROLL_TEXTURE, baseX, baseY, 0, 0, imageWidth, imageHeight, 256, 256);
         }
 
         RenderSystem.setShaderTexture(0, GUI_ROW_TEXTURE); // Make sure to bind row texture

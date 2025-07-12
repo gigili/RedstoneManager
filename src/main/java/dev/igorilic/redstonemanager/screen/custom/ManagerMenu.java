@@ -24,7 +24,6 @@ import java.util.List;
 public class ManagerMenu extends AbstractContainerMenu implements Interact {
     public final RedstoneManagerBlockEntity blockEntity;
     private final Level level;
-    private final Inventory playerInventory;
 
     // CREDIT GOES TO: diesieben07 | https://github.com/diesieben07/SevenCommons
     // must assign a slot number to each of the slots used by the GUI.
@@ -52,7 +51,6 @@ public class ManagerMenu extends AbstractContainerMenu implements Interact {
         super(ModMenuTypes.MANAGER_MENU.get(), containerId);
         this.blockEntity = ((RedstoneManagerBlockEntity) blockEntity);
         this.level = inv.player.level();
-        this.playerInventory = inv;
 
         addPlayerInventory(inv);
         addPlayerHotbar(inv);
