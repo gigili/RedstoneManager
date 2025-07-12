@@ -2,11 +2,18 @@
 
 Give credit where credit is due.
 
-## Suggestions
+## Help
 
 * [BenBenLaw](https://github.com/benbenlaw/)
-* [MangoRage](https://github.com/RealMangorage)
 
 ## Textures
 
 * [MangoRage - SWSS](https://github.com/RealMangorage/swss)
+
+## Tutorials
+
+* [ModdingByKaupenjoe](https://www.youtube.com/@ModdingByKaupenjoe/videos)
+
+## Documentation
+
+* [NeoForge](https://docs.neoforged.net/)

@@ -10,6 +10,14 @@ group = mod_group_id
 
 repositories {
     mavenLocal()
+    maven {
+        // location of the maven that hosts JEI files since January 2023
+        name = "Jared's maven"
+        url = "https://maven.blamejared.com/"
+    }
+    maven {
+        url = "https://api.modrinth.com/maven"
+    }
 }
 
 base {
@@ -98,9 +106,9 @@ sourceSets.main.resources { srcDir 'src/generated/resources' }
 dependencies {
     // Example mod dependency with JEI
     // The JEI API is declared for compile time use, while the full JEI artifact is used at runtime
-    // compileOnly "mezz.jei:jei-${mc_version}-common-api:${jei_version}"
-    // compileOnly "mezz.jei:jei-${mc_version}-forge-api:${jei_version}"
-    // runtimeOnly "mezz.jei:jei-${mc_version}-forge:${jei_version}"
+    compileOnly "mezz.jei:jei-${minecraft_version}-common-api:${jei_version}"
+    compileOnly "mezz.jei:jei-${minecraft_version}-neoforge-api:${jei_version}"
+    runtimeOnly "mezz.jei:jei-${minecraft_version}-neoforge:${jei_version}"
 
     // Example mod dependency using a mod jar from ./libs with a flat dir repository
     // This maps to ./libs/coolmod-${mc_version}-${coolmod_version}.jar
@@ -116,6 +124,8 @@ dependencies {
     // For more info:
     // http://www.gradle.org/docs/current/userguide/artifact_dependencies_tutorial.html
     // http://www.gradle.org/docs/current/userguide/dependency_management.html
+
+    implementation "maven.modrinth:jade:${jade_version}"
 }
 
 // This block of code expands all declared replace properties in the specified resource targets.

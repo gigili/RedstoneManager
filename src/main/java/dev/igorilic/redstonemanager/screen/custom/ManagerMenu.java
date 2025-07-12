@@ -2,6 +2,7 @@ package dev.igorilic.redstonemanager.screen.custom;
 
 import dev.igorilic.redstonemanager.block.ModBlocks;
 import dev.igorilic.redstonemanager.block.entity.RedstoneManagerBlockEntity;
+import dev.igorilic.redstonemanager.component.ModDataComponents;
 import dev.igorilic.redstonemanager.item.custom.RedstoneLinkerItem;
 import dev.igorilic.redstonemanager.screen.ModMenuTypes;
 import dev.igorilic.redstonemanager.util.Interact;
@@ -72,15 +73,7 @@ public class ManagerMenu extends AbstractContainerMenu implements Interact {
             return ItemStack.EMPTY;
         }
 
-        // From manager to player
-        else {
-            int linkerIndex = pIndex - VANILLA_FIRST_SLOT_INDEX - VANILLA_SLOT_COUNT;
-            if (!moveItemStackTo(sourceStack, VANILLA_FIRST_SLOT_INDEX, VANILLA_FIRST_SLOT_INDEX + VANILLA_SLOT_COUNT, false)) {
-                return ItemStack.EMPTY;
-            }
-            blockEntity.removeLinker(linkerIndex);
-            return sourceStack;
-        }
+        return ItemStack.EMPTY;
     }
 
     @Override
@@ -105,28 +98,45 @@ public class ManagerMenu extends AbstractContainerMenu implements Interact {
 
     @Override
     public void clicked(ItemStack itemStack, CompoundTag extraData, ClickType clickType, int button) {
-        if (clickType == ClickType.PICKUP) {
-            if (getCarried().isEmpty() && itemStack != null) {
-                final var result = itemStack.copy();
-                if (!result.isEmpty()) {
-                    setCarried(result);
-                    blockEntity.removeLinker(findLinkerIndex(blockEntity.getLinkers(), itemStack));
+        switch (clickType) {
+            case PICKUP -> {
+                if (getCarried().isEmpty() && itemStack != null) {
+                    final var result = itemStack.copy();
+                    if (!result.isEmpty()) {
+                        setCarried(result);
+                        blockEntity.removeLinker(findLinkerIndex(blockEntity.getLinkers(), itemStack));
+                    }
                 }
             }
-        } else if (clickType == ClickType.SWAP) {
-            if (!getCarried().isEmpty() && itemStack != null) {
-                final var result = getCarried().copy();
-                if (!result.isEmpty()) {
-                    setCarried(itemStack);
-                    blockEntity.swapLinker(findLinkerIndex(blockEntity.getLinkers(), itemStack), result);
+            case SWAP -> {
+                if (!getCarried().isEmpty() && itemStack != null) {
+                    final var result = getCarried().copy();
+                    if (!result.isEmpty()) {
+                        setCarried(itemStack);
+                        blockEntity.swapLinker(findLinkerIndex(blockEntity.getLinkers(), itemStack), result);
+                    }
                 }
+            }
+            case QUICK_MOVE -> {
+                int linkerIndex = findLinkerIndex(blockEntity.getLinkers(), itemStack);
+                if (moveItemStackTo(itemStack, VANILLA_FIRST_SLOT_INDEX, VANILLA_FIRST_SLOT_INDEX + VANILLA_SLOT_COUNT, false)) {
+                    blockEntity.removeLinker(linkerIndex);
+                    setCarried(ItemStack.EMPTY);
+                }
+            }
+            case null, default -> {
             }
         }
     }
 
     public int findLinkerIndex(List<ItemStack> linkers, ItemStack target) {
         for (int i = 0; i < linkers.size(); i++) {
-            if (ItemStack.isSameItemSameComponents(linkers.get(i), target)) {
+            ItemStack linker = linkers.get(i);
+            if (linker.has(ModDataComponents.ITEM_UUID) && target.has(ModDataComponents.ITEM_UUID)) {
+                if (linker.get(ModDataComponents.ITEM_UUID).equals(target.get(ModDataComponents.ITEM_UUID))) {
+                    return i;
+                }
+            } else if (ItemStack.isSameItemSameComponents(linkers.get(i), target)) {
                 return i;
             }
         }

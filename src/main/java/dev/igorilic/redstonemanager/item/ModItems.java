@@ -11,7 +11,7 @@ public class ModItems {
     public static final DeferredRegister.Items ITEMS = DeferredRegister.createItems(RedstoneManager.MOD_ID);
 
     public static final DeferredItem<Item> RM_LINKER = ITEMS.register("rm_linker",
-            () -> new RedstoneLinkerItem(new Item.Properties()));
+            () -> new RedstoneLinkerItem(new Item.Properties().stacksTo(1)));
 
     public static void register(IEventBus eventBus) {
         ITEMS.register(eventBus);

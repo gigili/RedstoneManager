@@ -7,6 +7,8 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.InteractionResult;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.TooltipFlag;
@@ -17,6 +19,7 @@ import net.minecraft.world.level.block.Blocks;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.List;
+import java.util.UUID;
 
 public class RedstoneLinkerItem extends Item {
     private static final List<Block> ALLOWED_ITEMS = List.of(
@@ -25,6 +28,23 @@ public class RedstoneLinkerItem extends Item {
 
     public RedstoneLinkerItem(Properties properties) {
         super(properties);
+    }
+
+    @Override
+    public void inventoryTick(@NotNull ItemStack stack, @NotNull Level level, @NotNull Entity entity, int slotId, boolean isSelected) {
+        super.inventoryTick(stack, level, entity, slotId, isSelected);
+        if (!level.isClientSide && entity instanceof Player && !stack.has(ModDataComponents.ITEM_UUID)) {
+            stack.set(ModDataComponents.ITEM_UUID, UUID.randomUUID().toString());
+        }
+    }
+
+    @Override
+    public @NotNull ItemStack getDefaultInstance() {
+        ItemStack stack = new ItemStack(this);
+        if (!stack.has(ModDataComponents.ITEM_UUID)) {
+            stack.set(ModDataComponents.ITEM_UUID, UUID.randomUUID().toString());
+        }
+        return super.getDefaultInstance();
     }
 
     @Override

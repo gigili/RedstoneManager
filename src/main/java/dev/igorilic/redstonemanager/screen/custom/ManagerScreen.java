@@ -1,5 +1,6 @@
 package dev.igorilic.redstonemanager.screen.custom;
 
+import com.mojang.blaze3d.platform.InputConstants;
 import com.mojang.blaze3d.systems.RenderSystem;
 import dev.igorilic.redstonemanager.RedstoneManager;
 import dev.igorilic.redstonemanager.block.entity.RedstoneManagerBlockEntity;
@@ -23,6 +24,7 @@ import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.LeverBlock;
 import net.minecraft.world.level.block.state.BlockState;
 import org.jetbrains.annotations.NotNull;
+import org.lwjgl.glfw.GLFW;
 
 import java.util.List;
 
@@ -48,6 +50,7 @@ public class ManagerScreen extends AbstractContainerScreen<ManagerMenu> {
     private boolean isDraggingScrollbar = false;
     private int dragOffsetY = 0;
 
+    private Inventory playerInventory;
 
     public ManagerScreen(ManagerMenu menu, Inventory playerInventory, Component title) {
         super(menu, playerInventory, title);
@@ -58,6 +61,7 @@ public class ManagerScreen extends AbstractContainerScreen<ManagerMenu> {
         this.imageHeight = 175 + (visibleRows - 3) * 18;
         this.imageWidth = 209;
         this.inventoryLabelY = this.imageHeight - 98;
+        this.playerInventory = playerInventory;
     }
 
     @Override
@@ -74,7 +78,6 @@ public class ManagerScreen extends AbstractContainerScreen<ManagerMenu> {
     @Override
     protected void containerTick() {
         super.containerTick();
-        clampScrollIndex();
     }
 
     @Override
@@ -231,8 +234,14 @@ public class ManagerScreen extends AbstractContainerScreen<ManagerMenu> {
                         );
                     } else if (!stack.isEmpty() && button == 0) {
                         assert Minecraft.getInstance().player != null;
+                        int clickType = carried.isEmpty() ? ClickType.PICKUP.ordinal() : ClickType.SWAP.ordinal();
+                        if (InputConstants.isKeyDown(Minecraft.getInstance().getWindow().getWindow(), GLFW.GLFW_KEY_LEFT_SHIFT) ||
+                                InputConstants.isKeyDown(Minecraft.getInstance().getWindow().getWindow(), GLFW.GLFW_KEY_RIGHT_SHIFT)) {
+                            clickType = ClickType.QUICK_MOVE.ordinal();
+                        }
+
                         Minecraft.getInstance().player.connection.send(
-                                new MenuInteractPacketC2S(stack, carried.isEmpty() ? ClickType.PICKUP.ordinal() : ClickType.SWAP.ordinal(), 0)
+                                new MenuInteractPacketC2S(stack, clickType, 0)
                         );
                     }
                 }
@@ -298,5 +307,20 @@ public class ManagerScreen extends AbstractContainerScreen<ManagerMenu> {
             return true;
         }
         return super.mouseScrolled(mouseX, mouseY, scrollX, scrollY);
+    }
+
+    @Override
+    public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
+        if (keyCode == GLFW.GLFW_KEY_ESCAPE) {
+            return super.keyPressed(keyCode, scanCode, modifiers);
+        }
+
+        /*if (groupNameField.isFocused()) {
+            if (groupNameField.keyPressed(keyCode, scanCode, modifiers) || groupNameField.canConsumeInput()) {
+                return true;
+            }
+        }*/
+
+        return super.keyPressed(keyCode, scanCode, modifiers);
     }
 }
