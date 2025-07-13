@@ -60,6 +60,12 @@ public class RedstoneManagerBlockEntity extends BlockEntity implements MenuProvi
         return Collections.unmodifiableMap(items);
     }
 
+    public void createGroup(String groupName) {
+        items.computeIfAbsent(groupName, k -> new ArrayList<>()).add(ItemStack.EMPTY);
+        setChanged();
+        level.sendBlockUpdated(getBlockPos(), getBlockState(), getBlockState(), Block.UPDATE_ALL);
+    }
+
     public void addItemToGroup(String groupName, ItemStack item) {
         if (!(item.getItem() instanceof RedstoneLinkerItem)) return;
         this.items.computeIfAbsent(groupName, k -> new ArrayList<>()).add(item);
@@ -76,9 +82,9 @@ public class RedstoneManagerBlockEntity extends BlockEntity implements MenuProvi
 
         if (index != -1) {
             this.items.get(groupName).remove(index);
-            if (this.items.get(groupName).isEmpty()) {
+            /*if (this.items.get(groupName).isEmpty()) {
                 this.items.remove(groupName);
-            }
+            }*/
         }
 
         setChanged();

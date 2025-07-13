@@ -5,6 +5,7 @@ import com.mojang.blaze3d.systems.RenderSystem;
 import dev.igorilic.redstonemanager.RedstoneManager;
 import dev.igorilic.redstonemanager.block.entity.RedstoneManagerBlockEntity;
 import dev.igorilic.redstonemanager.component.ModDataComponents;
+import dev.igorilic.redstonemanager.item.custom.RedstoneLinkerItem;
 import dev.igorilic.redstonemanager.network.MenuInteractPacketC2S;
 import dev.igorilic.redstonemanager.network.PacketToggleLever;
 import dev.igorilic.redstonemanager.util.IUpdatable;
@@ -15,6 +16,7 @@ import dev.igorilic.redstonemanager.util.entries.HeaderEntry;
 import dev.igorilic.redstonemanager.util.entries.ItemEntry;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.client.renderer.GameRenderer;
@@ -34,6 +36,7 @@ import org.lwjgl.glfw.GLFW;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ThreadLocalRandom;
 
 public class ManagerScreen extends AbstractContainerScreen<ManagerMenu> implements IUpdatable {
     private static final ResourceLocation GUI_TEXTURE = ResourceLocation.fromNamespaceAndPath(RedstoneManager.MOD_ID, "textures/gui/gui_no_slots_large.png");
@@ -84,6 +87,16 @@ public class ManagerScreen extends AbstractContainerScreen<ManagerMenu> implemen
     protected void init() {
         super.init();
         this.clearWidgets();
+
+        Button btn = Button.builder(
+                        Component.literal("New Group"),
+                        (b) -> {
+                            blockEntity.createGroup("Default #" + ThreadLocalRandom.current().nextInt(1000));
+                        }
+                )
+                .bounds(leftPos + imageWidth - 84, topPos + 1, 60, 15)
+                .build();
+        this.addRenderableWidget(btn);
     }
 
     @Override
@@ -148,7 +161,6 @@ public class ManagerScreen extends AbstractContainerScreen<ManagerMenu> implemen
                 rowY += 15; // Label height
                 rendered++; // Count as a row
             } else if (entry instanceof ItemEntry itemEntry) {
-                int baseIndex = 0;
                 int rowItemCount = 0;
 
                 // Render up to COLUMNS per row
@@ -164,29 +176,31 @@ public class ManagerScreen extends AbstractContainerScreen<ManagerMenu> implemen
                         guiGraphics.blit(GUI_ROW_TEXTURE, startX, rowY, 0, 0, 162, 18, 162, 18);
                     }
 
-                    guiGraphics.renderItem(stack, x + 1, rowY + 1);
-                    renderLinkerItemBackground(stack, guiGraphics, x + 1, rowY + 1);
+                    if (stack.getItem() instanceof RedstoneLinkerItem) {
+                        guiGraphics.renderItem(stack, x + 1, rowY + 1);
+                        renderLinkerItemBackground(stack, guiGraphics, x + 1, rowY + 1);
 
-                    // Hover tooltips
-                    if (mouseX >= x && mouseX < x + 16 && mouseY >= rowY && mouseY < rowY + 16) {
-                        BlockPos leverPos = stack.get(ModDataComponents.COORDINATES);
-                        Component extraLabel = null;
-                        if (leverPos == null) {
-                            extraLabel = Component.translatable("errors.redstonemanager.manager.not_linked");
-                        } else if (blockEntity.getLevel() != null) {
-                            BlockState leverState = blockEntity.getLevel().getBlockState(leverPos);
-                            if (!leverState.is(Blocks.LEVER)) {
-                                extraLabel = Component.translatable("errors.redstonemanager.manager.invalid_link");
-                            } else {
-                                boolean isLeverOn = isLeverOn(stack);
-                                extraLabel = isLeverOn ? Component.translatable("tooltip.redstonemanager.manager.turn_off") : Component.translatable("tooltip.redstonemanager.manager.turn_on");
+                        // Hover tooltips
+                        if (mouseX >= x && mouseX < x + 16 && mouseY >= rowY && mouseY < rowY + 16) {
+                            BlockPos leverPos = stack.get(ModDataComponents.COORDINATES);
+                            Component extraLabel = null;
+                            if (leverPos == null) {
+                                extraLabel = Component.translatable("errors.redstonemanager.manager.not_linked");
+                            } else if (blockEntity.getLevel() != null) {
+                                BlockState leverState = blockEntity.getLevel().getBlockState(leverPos);
+                                if (!leverState.is(Blocks.LEVER)) {
+                                    extraLabel = Component.translatable("errors.redstonemanager.manager.invalid_link");
+                                } else {
+                                    boolean isLeverOn = isLeverOn(stack);
+                                    extraLabel = isLeverOn ? Component.translatable("tooltip.redstonemanager.manager.turn_off") : Component.translatable("tooltip.redstonemanager.manager.turn_on");
+                                }
                             }
-                        }
 
-                        if (extraLabel != null) {
-                            guiGraphics.renderTooltip(font, extraLabel, mouseX, mouseY - 12);
+                            if (extraLabel != null) {
+                                guiGraphics.renderTooltip(font, extraLabel, mouseX, mouseY - 12);
+                            }
+                            guiGraphics.renderTooltip(font, stack, mouseX, mouseY);
                         }
-                        guiGraphics.renderTooltip(font, stack, mouseX, mouseY);
                     }
 
                     index++;
