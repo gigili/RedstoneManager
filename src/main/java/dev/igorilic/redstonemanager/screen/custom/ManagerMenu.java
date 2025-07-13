@@ -2,7 +2,6 @@ package dev.igorilic.redstonemanager.screen.custom;
 
 import dev.igorilic.redstonemanager.block.ModBlocks;
 import dev.igorilic.redstonemanager.block.entity.RedstoneManagerBlockEntity;
-import dev.igorilic.redstonemanager.component.ModDataComponents;
 import dev.igorilic.redstonemanager.item.custom.RedstoneLinkerItem;
 import dev.igorilic.redstonemanager.screen.ModMenuTypes;
 import dev.igorilic.redstonemanager.util.Interact;
@@ -18,8 +17,6 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import org.jetbrains.annotations.NotNull;
-
-import java.util.List;
 
 public class ManagerMenu extends AbstractContainerMenu implements Interact {
     public final RedstoneManagerBlockEntity blockEntity;
@@ -38,10 +35,6 @@ public class ManagerMenu extends AbstractContainerMenu implements Interact {
     private static final int PLAYER_INVENTORY_SLOT_COUNT = PLAYER_INVENTORY_COLUMN_COUNT * PLAYER_INVENTORY_ROW_COUNT;
     private static final int VANILLA_SLOT_COUNT = HOTBAR_SLOT_COUNT + PLAYER_INVENTORY_SLOT_COUNT;
     private static final int VANILLA_FIRST_SLOT_INDEX = 0;
-    private static final int TE_INVENTORY_FIRST_SLOT_INDEX = VANILLA_FIRST_SLOT_INDEX + VANILLA_SLOT_COUNT;
-
-    // THIS YOU HAVE TO DEFINE!
-    private static final int TE_INVENTORY_SLOT_COUNT = 3;  // must be the number of slots you have!
 
     public ManagerMenu(int containerId, Inventory inv, FriendlyByteBuf extraData) {
         this(containerId, inv, inv.player.level().getBlockEntity(extraData.readBlockPos()));
@@ -66,7 +59,12 @@ public class ManagerMenu extends AbstractContainerMenu implements Interact {
 
         // From player to manager
         if (pIndex < VANILLA_FIRST_SLOT_INDEX + VANILLA_SLOT_COUNT) {
-            blockEntity.addLinker(sourceStack);
+            String groupName = "Default";
+            if (blockEntity.getItems().entrySet().stream().findFirst().isPresent()) {
+                groupName = blockEntity.getItems().entrySet().stream().findFirst().get().getKey();
+            }
+
+            blockEntity.addItemToGroup(groupName, sourceStack);
             sourceSlot.set(ItemStack.EMPTY);
             return ItemStack.EMPTY;
         }
@@ -101,43 +99,35 @@ public class ManagerMenu extends AbstractContainerMenu implements Interact {
                 if (getCarried().isEmpty() && itemStack != null) {
                     final var result = itemStack.copy();
                     if (!result.isEmpty()) {
-                        setCarried(result);
-                        blockEntity.removeLinker(findLinkerIndex(blockEntity.getLinkers(), itemStack));
+                        //blockEntity.removeLinker(blockEntity.findLinkerIndex(blockEntity.getLinkers(), itemStack));
+                        if (blockEntity.getItems().entrySet().stream().findFirst().isPresent()) {
+                            setCarried(result);
+                            blockEntity.removeItemFromGroup(blockEntity.getItems().entrySet().stream().findFirst().get().getKey(), itemStack);
+                        }
                     }
                 }
             }
             case SWAP -> {
                 if (!getCarried().isEmpty() && itemStack != null) {
                     final var result = getCarried().copy();
-                    if (!result.isEmpty()) {
+                    //TODO: Reimplement this
+                    /*if (!result.isEmpty()) {
                         setCarried(itemStack);
-                        blockEntity.swapLinker(findLinkerIndex(blockEntity.getLinkers(), itemStack), result);
-                    }
+                        blockEntity.swapLinker(blockEntity.findLinkerIndex(blockEntity.getLinkers(), itemStack), result);
+                    }*/
                 }
             }
             case QUICK_MOVE -> {
-                int linkerIndex = findLinkerIndex(blockEntity.getLinkers(), itemStack);
+                ItemStack itemToRemove = itemStack.copy();
                 if (moveItemStackTo(itemStack, VANILLA_FIRST_SLOT_INDEX, VANILLA_FIRST_SLOT_INDEX + VANILLA_SLOT_COUNT, false)) {
-                    blockEntity.removeLinker(linkerIndex);
-                    setCarried(ItemStack.EMPTY);
+                    if (blockEntity.getItems().entrySet().stream().findFirst().isPresent()) {
+                        blockEntity.removeItemFromGroup(blockEntity.getItems().entrySet().stream().findFirst().get().getKey(), itemToRemove);
+                        setCarried(ItemStack.EMPTY);
+                    }
                 }
             }
             case null, default -> {
             }
         }
-    }
-
-    public int findLinkerIndex(List<ItemStack> linkers, ItemStack target) {
-        for (int i = 0; i < linkers.size(); i++) {
-            ItemStack linker = linkers.get(i);
-            if (linker.has(ModDataComponents.ITEM_UUID) && target.has(ModDataComponents.ITEM_UUID)) {
-                if (linker.get(ModDataComponents.ITEM_UUID).equals(target.get(ModDataComponents.ITEM_UUID))) {
-                    return i;
-                }
-            } else if (ItemStack.isSameItemSameComponents(linkers.get(i), target)) {
-                return i;
-            }
-        }
-        return -1;
     }
 }

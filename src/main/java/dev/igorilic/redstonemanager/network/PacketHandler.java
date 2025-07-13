@@ -21,6 +21,12 @@ public class PacketHandler {
         );
 
         registrar.playToServer(
+                PacketMoveLinker.TYPE,
+                PacketMoveLinker.STREAM_CODEC,
+                PacketMoveLinker.HANDLER
+        );
+
+        registrar.playToServer(
                 MenuInteractPacketC2S.TYPE,
                 MenuInteractPacketC2S.STREAM_CODEC,
                 MenuInteractPacketC2S.HANDLER

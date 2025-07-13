@@ -7,11 +7,16 @@ import dev.igorilic.redstonemanager.block.entity.RedstoneManagerBlockEntity;
 import dev.igorilic.redstonemanager.component.ModDataComponents;
 import dev.igorilic.redstonemanager.network.MenuInteractPacketC2S;
 import dev.igorilic.redstonemanager.network.PacketToggleLever;
+import dev.igorilic.redstonemanager.util.IUpdatable;
 import dev.igorilic.redstonemanager.util.MousePositionManagerUtil;
 import dev.igorilic.redstonemanager.util.MouseUtil;
+import dev.igorilic.redstonemanager.util.entries.DisplayEntry;
+import dev.igorilic.redstonemanager.util.entries.HeaderEntry;
+import dev.igorilic.redstonemanager.util.entries.ItemEntry;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
+import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.client.renderer.GameRenderer;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
@@ -26,9 +31,11 @@ import net.minecraft.world.level.block.state.BlockState;
 import org.jetbrains.annotations.NotNull;
 import org.lwjgl.glfw.GLFW;
 
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
-public class ManagerScreen extends AbstractContainerScreen<ManagerMenu> {
+public class ManagerScreen extends AbstractContainerScreen<ManagerMenu> implements IUpdatable {
     private static final ResourceLocation GUI_TEXTURE = ResourceLocation.fromNamespaceAndPath(RedstoneManager.MOD_ID, "textures/gui/gui_no_slots_large.png");
     private static final ResourceLocation GUI_NO_SCROLL_TEXTURE = ResourceLocation.fromNamespaceAndPath(RedstoneManager.MOD_ID, "textures/gui/gui_no_slots_no_scroll_large.png");
     private static final ResourceLocation GUI_SCROLL_TEXTURE = ResourceLocation.fromNamespaceAndPath(RedstoneManager.MOD_ID, "textures/gui/gui_scroll.png");
@@ -41,8 +48,6 @@ public class ManagerScreen extends AbstractContainerScreen<ManagerMenu> {
 
     private final RedstoneManagerBlockEntity blockEntity;
 
-    private final List<ItemStack> linkers;
-
     private int scrollIndex = 0;
     public static int visibleRows = 7;
     private final int itemsPerPage;
@@ -50,18 +55,29 @@ public class ManagerScreen extends AbstractContainerScreen<ManagerMenu> {
     private boolean isDraggingScrollbar = false;
     private int dragOffsetY = 0;
 
-    private Inventory playerInventory;
+    private final List<DisplayEntry> flattenedEntries = new ArrayList<>();
+    private Map<String, List<ItemStack>> items;
+
+    private void regenerateFlattenedEntries() {
+        flattenedEntries.clear();
+        for (Map.Entry<String, List<ItemStack>> entry : items.entrySet()) {
+            flattenedEntries.add(new HeaderEntry(entry.getKey()));
+            for (ItemStack stack : entry.getValue()) {
+                flattenedEntries.add(new ItemEntry(stack));
+            }
+        }
+    }
 
     public ManagerScreen(ManagerMenu menu, Inventory playerInventory, Component title) {
         super(menu, playerInventory, title);
         MousePositionManagerUtil.setLastKnownPosition();
         this.blockEntity = menu.blockEntity;
-        this.linkers = this.blockEntity.getLinkers();
+        this.items = this.blockEntity.getItems();
         this.itemsPerPage = visibleRows * COLUMNS;
         this.imageHeight = 243;
-        this.imageWidth = 209;
+        this.imageWidth = 193;
         this.inventoryLabelY = this.imageHeight - 96;
-        this.playerInventory = playerInventory;
+        regenerateFlattenedEntries();
     }
 
     @Override
@@ -81,7 +97,7 @@ public class ManagerScreen extends AbstractContainerScreen<ManagerMenu> {
     }
 
     @Override
-    protected void renderBg(GuiGraphics guiGraphics, float partialTick, int mouseX, int mouseY) {
+    protected void renderBg(@NotNull GuiGraphics guiGraphics, float partialTick, int mouseX, int mouseY) {
         RenderSystem.setShader(GameRenderer::getPositionTexShader);
         RenderSystem.setShaderColor(1.0F, 1.0F, 1.0F, 1.0F);
         RenderSystem.setShaderTexture(0, GUI_TEXTURE);
@@ -89,18 +105,12 @@ public class ManagerScreen extends AbstractContainerScreen<ManagerMenu> {
         int baseX = (width - imageWidth) / 2;
         int baseY = (height - imageHeight) / 2;
 
-
-        int slotRowWidth = 162;
-        int slotRowHeight = 18;
-        int startX = leftPos + 7;
-        int startY = topPos + 17;
-
         int scrollbarX = leftPos + SCROLLBAR_X_OFFSET;
         int scrollbarY = topPos + SCROLLBAR_Y_OFFSET;
         int handleHeight = 15;
 
         int scrollbarHeight = getScrollbarHeight();
-        float maxScroll = (float) ((linkers.size() + COLUMNS - 1) / COLUMNS - visibleRows);
+        float maxScroll = (float) ((blockEntity.getAllItemSize() + COLUMNS - 1) / COLUMNS - visibleRows);
         float scrollFraction = scrollIndex / (maxScroll * COLUMNS); // use total index range
 
         if (maxScroll > 0) {
@@ -110,16 +120,6 @@ public class ManagerScreen extends AbstractContainerScreen<ManagerMenu> {
         } else {
             guiGraphics.blit(GUI_NO_SCROLL_TEXTURE, baseX, baseY, 0, 0, imageWidth, imageHeight, 256, 256);
         }
-
-        RenderSystem.setShaderTexture(0, GUI_ROW_TEXTURE); // Make sure to bind row texture
-        for (int i = 0; i < visibleRows; i++) {
-            int y = startY + (i * slotRowHeight);
-            guiGraphics.blit(GUI_ROW_TEXTURE, startX, y, 0, 0, slotRowWidth, slotRowHeight, slotRowWidth, slotRowHeight);
-        }
-    }
-
-    private int getScrollbarHeight() {
-        return 18 * 3; // Was 18 * visibleRows, but we have scroll fixed to 3 rows height
     }
 
     @Override
@@ -127,47 +127,79 @@ public class ManagerScreen extends AbstractContainerScreen<ManagerMenu> {
         super.render(guiGraphics, mouseX, mouseY, partialTick);
         this.renderTooltip(guiGraphics, mouseX, mouseY);
 
-        int startX = leftPos + 8;
-        int startY = topPos + 18;
-
-        for (int i = 0; i < itemsPerPage; i++) {
-            int index = scrollIndex + i;
-            if (index >= linkers.size()) break;
-
-            ItemStack stack = linkers.get(index);
-
-            int row = i / COLUMNS;
-            int col = i % COLUMNS;
-
-            int x = startX + col * 18;
-            int y = startY + row * 18;
-
-            if (mouseX >= x && mouseX < x + 16 && mouseY >= y && mouseY < y + 16) {
-                BlockPos leverPos = stack.get(ModDataComponents.COORDINATES);
-                Component extraLabel = null;
-                if (leverPos == null) {
-                    extraLabel = Component.translatable("errors.redstonemanager.manager.not_linked");
-                } else if (blockEntity.getLevel() != null) {
-                    BlockState leverState = blockEntity.getLevel().getBlockState(leverPos);
-                    if (!leverState.is(Blocks.LEVER)) {
-                        extraLabel = Component.translatable("errors.redstonemanager.manager.invalid_link");
-                    } else {
-                        boolean isLeverOn = isLeverOn(stack);
-                        extraLabel = isLeverOn ? Component.translatable("tooltip.redstonemanager.manager.turn_off") : Component.translatable("tooltip.redstonemanager.manager.turn_on");
-                    }
-                }
-
-                if (extraLabel != null) {
-                    guiGraphics.renderTooltip(font, extraLabel, mouseX, mouseY - 12);
-                }
-                guiGraphics.renderTooltip(font, stack, mouseX, mouseY);
-            }
-
-            renderLinkerItemBackground(stack, guiGraphics, x, y);
-            guiGraphics.renderItem(stack, x, y);
-        }
+        renderItems(guiGraphics, mouseX, mouseY);
 
         renderTooltip(guiGraphics, mouseX, mouseY);
+    }
+
+    private void renderItems(@NotNull GuiGraphics guiGraphics, int mouseX, int mouseY) {
+        int startX = leftPos + 7;
+
+        int rowY = topPos + 17;
+        int rendered = 0;
+        int index = scrollIndex;
+
+        while (rendered < itemsPerPage && index < flattenedEntries.size()) {
+            DisplayEntry entry = flattenedEntries.get(index);
+
+            if (entry instanceof HeaderEntry(String groupName)) {
+                // Render group label spanning all columns
+                guiGraphics.drawString(font, groupName, startX + 3, rowY + 3, 0xFFFFFF);
+                rowY += 15; // Label height
+                rendered++; // Count as a row
+            } else if (entry instanceof ItemEntry itemEntry) {
+                int baseIndex = 0;
+                int rowItemCount = 0;
+
+                // Render up to COLUMNS per row
+                while (rowItemCount < COLUMNS && index < flattenedEntries.size()) {
+                    DisplayEntry subEntry = flattenedEntries.get(index);
+                    if (!(subEntry instanceof ItemEntry(ItemStack stack))) break;
+
+                    int col = rowItemCount;
+                    int x = startX + col * 18;
+
+                    if (col == 0) {
+                        RenderSystem.setShaderTexture(0, GUI_ROW_TEXTURE); // Make sure to bind row texture
+                        guiGraphics.blit(GUI_ROW_TEXTURE, startX, rowY, 0, 0, 162, 18, 162, 18);
+                    }
+
+                    guiGraphics.renderItem(stack, x + 1, rowY + 1);
+                    renderLinkerItemBackground(stack, guiGraphics, x + 1, rowY + 1);
+
+                    // Hover tooltips
+                    if (mouseX >= x && mouseX < x + 16 && mouseY >= rowY && mouseY < rowY + 16) {
+                        BlockPos leverPos = stack.get(ModDataComponents.COORDINATES);
+                        Component extraLabel = null;
+                        if (leverPos == null) {
+                            extraLabel = Component.translatable("errors.redstonemanager.manager.not_linked");
+                        } else if (blockEntity.getLevel() != null) {
+                            BlockState leverState = blockEntity.getLevel().getBlockState(leverPos);
+                            if (!leverState.is(Blocks.LEVER)) {
+                                extraLabel = Component.translatable("errors.redstonemanager.manager.invalid_link");
+                            } else {
+                                boolean isLeverOn = isLeverOn(stack);
+                                extraLabel = isLeverOn ? Component.translatable("tooltip.redstonemanager.manager.turn_off") : Component.translatable("tooltip.redstonemanager.manager.turn_on");
+                            }
+                        }
+
+                        if (extraLabel != null) {
+                            guiGraphics.renderTooltip(font, extraLabel, mouseX, mouseY - 12);
+                        }
+                        guiGraphics.renderTooltip(font, stack, mouseX, mouseY);
+                    }
+
+                    index++;
+                    rowItemCount++;
+                }
+
+                rowY += 18; // One row of items rendered
+                rendered++;
+                continue; // Skip index++ since it was handled in inner loop
+            }
+
+            index++;
+        }
     }
 
     private void renderLinkerItemBackground(ItemStack linkerItem, GuiGraphics guiGraphics, int slotX, int slotY) {
@@ -175,6 +207,10 @@ public class ManagerScreen extends AbstractContainerScreen<ManagerMenu> {
         int color = isLeverOn ? 0x7700FF00 : 0x77FF0000; // Green/Red with transparency
         int slotSize = 16;
         guiGraphics.fill(slotX, slotY, slotX + slotSize, slotY + slotSize, color);
+    }
+
+    private int getScrollbarHeight() {
+        return 18 * 3; // Was 18 * visibleRows, but we have scroll fixed to 3 rows height
     }
 
     private boolean isLeverOn(ItemStack stack) {
@@ -186,11 +222,16 @@ public class ManagerScreen extends AbstractContainerScreen<ManagerMenu> {
     }
 
     private void clampScrollIndex() {
-        int totalRows = (linkers.size() + COLUMNS - 1) / COLUMNS;
+        int totalRows = (blockEntity.getAllItemSize() + COLUMNS - 1) / COLUMNS;
         int maxStartRow = Math.max(0, totalRows - visibleRows);
         int maxScrollIndex = maxStartRow * COLUMNS;
 
         scrollIndex = Mth.clamp(scrollIndex, 0, maxScrollIndex);
+    }
+
+    private boolean isShiftDown() {
+        return InputConstants.isKeyDown(Minecraft.getInstance().getWindow().getWindow(), GLFW.GLFW_KEY_LEFT_SHIFT) ||
+                InputConstants.isKeyDown(Minecraft.getInstance().getWindow().getWindow(), GLFW.GLFW_KEY_RIGHT_SHIFT);
     }
 
     @Override
@@ -202,48 +243,76 @@ public class ManagerScreen extends AbstractContainerScreen<ManagerMenu> {
         int slotSize = 18;
 
         ItemStack carried = menu.getCarried();
-        for (int i = 0; i < itemsPerPage; i++) {
-            int index = scrollIndex + i;
+        int rowY = startY;
+        int rendered = 0;
+        int index = scrollIndex;
 
-            int row = i / COLUMNS;
-            int col = i % COLUMNS;
-            int x = startX + col * slotSize;
-            int y = startY + row * slotSize;
+        while (rendered < itemsPerPage && index < flattenedEntries.size()) {
+            DisplayEntry entry = flattenedEntries.get(index);
 
-            if (mouseX >= x && mouseX < x + 16 && mouseY >= y && mouseY < y + 16) {
-                if (index < linkers.size()) {
-                    ItemStack stack = linkers.get(index);
-                    if (!stack.isEmpty() && button == 1) {
-                        assert Minecraft.getInstance().player != null;
-                        Minecraft.getInstance().player.connection.send(
-                                new PacketToggleLever(blockEntity.getBlockPos(), stack)
-                        );
-                    } else if (!stack.isEmpty() && button == 0) {
-                        assert Minecraft.getInstance().player != null;
-                        int clickType = carried.isEmpty() ? ClickType.PICKUP.ordinal() : ClickType.SWAP.ordinal();
-                        if (InputConstants.isKeyDown(Minecraft.getInstance().getWindow().getWindow(), GLFW.GLFW_KEY_LEFT_SHIFT) ||
-                                InputConstants.isKeyDown(Minecraft.getInstance().getWindow().getWindow(), GLFW.GLFW_KEY_RIGHT_SHIFT)) {
-                            clickType = ClickType.QUICK_MOVE.ordinal();
-                        }
-
-                        Minecraft.getInstance().player.connection.send(
-                                new MenuInteractPacketC2S(stack, clickType, 0)
-                        );
-                    }
-                }
-                return true;
+            // Just a label row we can skip it
+            if (entry instanceof HeaderEntry) {
+                rowY += 12;
+                index++;
+                rendered++;
+                continue;
             }
+
+            if (entry instanceof ItemEntry) {
+                int rowItemCount = 0;
+                while (rowItemCount < COLUMNS && index < flattenedEntries.size()) {
+                    DisplayEntry subEntry = flattenedEntries.get(index);
+                    if (!(subEntry instanceof ItemEntry(ItemStack stack))) break;
+
+                    int col = rowItemCount;
+                    int x = startX + col * slotSize;
+                    int y = rowY;
+
+                    if (mouseX >= x && mouseX < x + 16 && mouseY >= y && mouseY < y + 16) {
+                        if (!stack.isEmpty()) {
+                            LocalPlayer player = Minecraft.getInstance().player;
+                            if (button == 1) {
+                                assert player != null;
+                                player.connection.send(new PacketToggleLever(blockEntity.getBlockPos(), stack));
+                            } else if (button == 0) {
+                                assert player != null;
+                                int clickType = carried.isEmpty() ? ClickType.PICKUP.ordinal() : ClickType.SWAP.ordinal();
+
+                                if (isShiftDown()) {
+                                    clickType = ClickType.QUICK_MOVE.ordinal();
+                                }
+
+                                player.connection.send(new MenuInteractPacketC2S(stack, clickType, 0, blockEntity.getBlockPos()));
+                            }
+                        }
+                        return true;
+                    }
+
+                    rowItemCount++;
+                    index++;
+                }
+
+                rowY += 18;
+                rendered++;
+                continue;
+            }
+
+            index++;
         }
 
+        if (button == 0) {
+            clampScrollIndex();
+        }
 
         // Handle scrollbar click
         int scrollbarX = leftPos + SCROLLBAR_X_OFFSET + 1;
         int scrollbarY = topPos + SCROLLBAR_Y_OFFSET;
         int handleHeight = 15;
-        int maxScroll = Math.max(0, linkers.size() - itemsPerPage);
+        float maxScroll = (float) ((blockEntity.getAllItemSize() + COLUMNS - 1) / COLUMNS - visibleRows);
+
         if (maxScroll > 0) {
-            float scrollPercent = scrollIndex / (float) maxScroll;
-            int handleY = scrollbarY + (int) ((getScrollbarHeight() - handleHeight) * scrollPercent);
+            float scrollFraction = scrollIndex / (maxScroll * COLUMNS);
+            int handleY = Math.max(scrollbarY + (int) ((getScrollbarHeight() - handleHeight) * scrollFraction), scrollbarY + 1);
 
             if (MouseUtil.isMouseOver(mouseX, mouseY, scrollbarX, handleY, SCROLLBAR_WIDTH, handleHeight)) {
                 isDraggingScrollbar = true;
@@ -254,10 +323,6 @@ public class ManagerScreen extends AbstractContainerScreen<ManagerMenu> {
             }
         }
 
-        if (button == 0) {
-            clampScrollIndex();
-        }
-
         return super.mouseClicked(mouseX, mouseY, button);
     }
 
@@ -266,7 +331,7 @@ public class ManagerScreen extends AbstractContainerScreen<ManagerMenu> {
         if (isDraggingScrollbar) {
             int scrollbarY = topPos + SCROLLBAR_Y_OFFSET;
             int handleHeight = 15;
-            int maxScroll = Math.max(0, ((linkers.size() + COLUMNS - 1) / COLUMNS - visibleRows) * COLUMNS);
+            int maxScroll = Math.max(0, ((blockEntity.getAllItemSize() + COLUMNS - 1) / COLUMNS - visibleRows) * COLUMNS);
 
             int relativeY = (int) mouseY - scrollbarY - dragOffsetY;
             float percent = Mth.clamp(relativeY / (float) (getScrollbarHeight() - handleHeight), 0.0F, 1.0F);
@@ -282,7 +347,7 @@ public class ManagerScreen extends AbstractContainerScreen<ManagerMenu> {
 
     @Override
     public boolean mouseScrolled(double mouseX, double mouseY, double scrollX, double scrollY) {
-        int maxScroll = Math.max(0, ((linkers.size() + COLUMNS - 1) / COLUMNS - visibleRows) * COLUMNS);
+        int maxScroll = Math.max(0, ((blockEntity.getAllItemSize() + COLUMNS - 1) / COLUMNS - visibleRows) * COLUMNS);
         if (maxScroll > 0) {
             // Scroll by whole rows
             int newScrollIndex = scrollIndex - (int) scrollY * COLUMNS;
@@ -308,5 +373,11 @@ public class ManagerScreen extends AbstractContainerScreen<ManagerMenu> {
         }*/
 
         return super.keyPressed(keyCode, scanCode, modifiers);
+    }
+
+    @Override
+    public void update() {
+        this.items = this.blockEntity.getItems();
+        regenerateFlattenedEntries();
     }
 }

@@ -9,6 +9,7 @@ Give credit where credit is due.
 ## Textures
 
 * [MangoRage - SWSS](https://github.com/RealMangorage/swss)
+* [Settings icon by Icons8](https://icons8.com/icon/12784/settings)
 
 ## Tutorials
 
