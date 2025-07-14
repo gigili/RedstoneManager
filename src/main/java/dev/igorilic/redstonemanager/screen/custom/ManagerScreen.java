@@ -138,18 +138,9 @@ public class ManagerScreen extends AbstractContainerScreen<ManagerMenu> implemen
         int baseX = (width - imageWidth) / 2;
         int baseY = (height - imageHeight) / 2;
 
-        int scrollbarX = leftPos + SCROLLBAR_X_OFFSET;
-        int scrollbarY = topPos + SCROLLBAR_Y_OFFSET;
-        int handleHeight = 15;
-
-        int scrollbarHeight = getScrollbarHeight();
-        float maxScroll = (float) ((blockEntity.getAllItemSize() + COLUMNS - 1) / COLUMNS - visibleRows);
-        float scrollFraction = scrollIndex / (maxScroll * COLUMNS); // use total index range
-
-        if (maxScroll > 0) {
-            int handleY = Math.max(scrollbarY + (int) ((scrollbarHeight - handleHeight) * scrollFraction), scrollbarY + 1);
+        if (canScroll()) {
             guiGraphics.blit(GUI_TEXTURE, baseX, baseY, 0, 0, imageWidth, imageHeight, 256, 256);
-            guiGraphics.blit(GUI_SCROLL_TEXTURE, scrollbarX, handleY, 168, 0, 12, handleHeight, 12, 15);
+            drawScrollbar(guiGraphics);
         } else {
             guiGraphics.blit(GUI_NO_SCROLL_TEXTURE, baseX, baseY, 0, 0, imageWidth, imageHeight, 256, 256);
         }
@@ -160,14 +151,28 @@ public class ManagerScreen extends AbstractContainerScreen<ManagerMenu> implemen
         super.render(guiGraphics, mouseX, mouseY, partialTick);
         this.renderTooltip(guiGraphics, mouseX, mouseY);
 
+        guiGraphics.enableScissor(leftPos + 7, topPos + 17, leftPos + 7 + 162, topPos + 17 + (18 * visibleRows));
         renderItems(guiGraphics, mouseX, mouseY);
+        guiGraphics.disableScissor();
         renderTooltip(guiGraphics, mouseX, mouseY);
+    }
+
+    private void drawScrollbar(GuiGraphics guiGraphics) {
+        int scrollbarX = leftPos + SCROLLBAR_X_OFFSET;
+        int scrollbarY = topPos + SCROLLBAR_Y_OFFSET;
+        int handleHeight = 15;
+
+        float maxScroll = getTotalRows() - visibleRows;
+        float scrollFraction = scrollIndex / (maxScroll * COLUMNS); // use total index range
+        int handleY = Math.max(scrollbarY + (int) ((getScrollbarHeight() - handleHeight) * scrollFraction), scrollbarY + 1);
+
+        guiGraphics.blit(GUI_SCROLL_TEXTURE, scrollbarX, handleY, 168, 0, 12, 15, 12, 15);
     }
 
     private void renderItems(@NotNull GuiGraphics guiGraphics, int mouseX, int mouseY) {
         int startX = leftPos + 7;
 
-        int rowY = topPos + 17;
+        int rowY = topPos + 19;
         int rendered = 0;
         int index = scrollIndex;
 
@@ -179,7 +184,7 @@ public class ManagerScreen extends AbstractContainerScreen<ManagerMenu> implemen
                 guiGraphics.drawString(font, groupName, startX + 3, rowY + 3, 0xFFFFFF);
 
                 renderToggleButtons(guiGraphics, startX + 3, rowY + 3, groupName);
-                rowY += 15; // Label height
+                rowY += 18; // Label height
                 rendered++; // Count as a row
             } else if (entry instanceof ItemEntry) {
                 int rowItemCount = 0;
@@ -242,9 +247,9 @@ public class ManagerScreen extends AbstractContainerScreen<ManagerMenu> implemen
         boolean allOn = linker.isPowered();
 
         if (allOn) {
-            guiGraphics.blit(GUI_TOGGLE_BUTTONS, startX + 137, startY - 1, 0, 0, 20, 11, 41, 11);
+            guiGraphics.blit(GUI_TOGGLE_BUTTONS, startX + 136, startY - 1, 0, 0, 20, 11, 41, 11);
         } else {
-            guiGraphics.blit(GUI_TOGGLE_BUTTONS, startX + 137, startY - 1, 20.5f, 0, 20, 11, 41, 11);
+            guiGraphics.blit(GUI_TOGGLE_BUTTONS, startX + 136, startY - 1, 20.5f, 0, 20, 11, 41, 11);
         }
     }
 
@@ -267,12 +272,15 @@ public class ManagerScreen extends AbstractContainerScreen<ManagerMenu> implemen
         return state.is(Blocks.LEVER) && state.getValue(LeverBlock.POWERED);
     }
 
-    private void clampScrollIndex() {
-        int totalRows = (blockEntity.getAllItemSize() + COLUMNS - 1) / COLUMNS;
-        int maxStartRow = Math.max(0, totalRows - visibleRows);
-        int maxScrollIndex = maxStartRow * COLUMNS;
+    private int getTotalRows() {
+        int totalHeaders = (int) flattenedEntries.stream().filter(e -> e instanceof HeaderEntry).count();
+        int totalItems = (int) flattenedEntries.stream().filter(e -> e instanceof ItemEntry).count();
+        int itemRows = (totalItems + COLUMNS - 1) / COLUMNS;
+        return totalHeaders + itemRows;
+    }
 
-        scrollIndex = Mth.clamp(scrollIndex, 0, maxScrollIndex);
+    private boolean canScroll() {
+        return getTotalRows() > visibleRows;
     }
 
     private boolean isShiftDown() {
@@ -358,10 +366,6 @@ public class ManagerScreen extends AbstractContainerScreen<ManagerMenu> implemen
             index++;
         }
 
-        if (button == 0) {
-            clampScrollIndex();
-        }
-
         // Handle scrollbar click
         int scrollbarX = leftPos + SCROLLBAR_X_OFFSET + 1;
         int scrollbarY = topPos + SCROLLBAR_Y_OFFSET;
@@ -389,7 +393,7 @@ public class ManagerScreen extends AbstractContainerScreen<ManagerMenu> implemen
         if (isDraggingScrollbar) {
             int scrollbarY = topPos + SCROLLBAR_Y_OFFSET;
             int handleHeight = 15;
-            int maxScroll = Math.max(0, ((blockEntity.getAllItemSize() + COLUMNS - 1) / COLUMNS - visibleRows) * COLUMNS);
+            int maxScroll = Math.max(0, (getTotalRows() - visibleRows) * COLUMNS);
 
             int relativeY = (int) mouseY - scrollbarY - dragOffsetY;
             float percent = Mth.clamp(relativeY / (float) (getScrollbarHeight() - handleHeight), 0.0F, 1.0F);
@@ -405,17 +409,17 @@ public class ManagerScreen extends AbstractContainerScreen<ManagerMenu> implemen
 
     @Override
     public boolean mouseScrolled(double mouseX, double mouseY, double scrollX, double scrollY) {
-        int maxScroll = Math.max(0, ((blockEntity.getAllItemSize() + COLUMNS - 1) / COLUMNS - visibleRows) * COLUMNS);
-        if (maxScroll > 0) {
-            // Scroll by whole rows
-            int newScrollIndex = scrollIndex - (int) scrollY * COLUMNS;
-            // Clamp within bounds
-            newScrollIndex = Mth.clamp(newScrollIndex, 0, maxScroll);
-            // Snap to multiple of COLUMNS (whole rows)
-            scrollIndex = (newScrollIndex / COLUMNS) * COLUMNS;
-            return true;
-        }
-        return super.mouseScrolled(mouseX, mouseY, scrollX, scrollY);
+        if (!canScroll()) return super.mouseScrolled(mouseX, mouseY, scrollX, scrollY);
+
+        int totalRows = getTotalRows();
+        int maxScrollRows = totalRows - visibleRows;
+        int newRow = (scrollIndex / COLUMNS) - (int) Math.signum(scrollY);
+
+        // Clamp to valid row range
+        newRow = Mth.clamp(newRow, 0, maxScrollRows);
+        scrollIndex = newRow * COLUMNS;
+
+        return true;
     }
 
     @Override
