@@ -6,7 +6,10 @@ import dev.igorilic.redstonemanager.RedstoneManager;
 import dev.igorilic.redstonemanager.block.entity.RedstoneManagerBlockEntity;
 import dev.igorilic.redstonemanager.component.ModDataComponents;
 import dev.igorilic.redstonemanager.item.custom.RedstoneLinkerItem;
-import dev.igorilic.redstonemanager.network.*;
+import dev.igorilic.redstonemanager.network.MenuInteractPacketC2S;
+import dev.igorilic.redstonemanager.network.PacketCreateGroup;
+import dev.igorilic.redstonemanager.network.PacketToggleAllLevers;
+import dev.igorilic.redstonemanager.network.PacketToggleLever;
 import dev.igorilic.redstonemanager.util.IUpdatable;
 import dev.igorilic.redstonemanager.util.LinkerGroup;
 import dev.igorilic.redstonemanager.util.MousePositionManagerUtil;
@@ -151,9 +154,9 @@ public class ManagerScreen extends AbstractContainerScreen<ManagerMenu> implemen
         super.render(guiGraphics, mouseX, mouseY, partialTick);
         this.renderTooltip(guiGraphics, mouseX, mouseY);
 
-        guiGraphics.enableScissor(leftPos + 7, topPos + 17, leftPos + 7 + 162, topPos + 17 + (18 * visibleRows));
+        //guiGraphics.enableScissor(leftPos + 7, topPos + 17, leftPos + 7 + 162, topPos + 17 + (18 * visibleRows));
         renderItems(guiGraphics, mouseX, mouseY);
-        guiGraphics.disableScissor();
+        //guiGraphics.disableScissor();
         renderTooltip(guiGraphics, mouseX, mouseY);
     }
 
@@ -171,34 +174,57 @@ public class ManagerScreen extends AbstractContainerScreen<ManagerMenu> implemen
 
     private void renderItems(@NotNull GuiGraphics guiGraphics, int mouseX, int mouseY) {
         int startX = leftPos + 7;
-
         int rowY = topPos + 19;
-        int rendered = 0;
-        int index = scrollIndex;
 
-        while (rendered < itemsPerPage && index < flattenedEntries.size()) {
-            DisplayEntry entry = flattenedEntries.get(index);
+        int renderedRows = 0;
+        int flattenedIndex = 0;
+        int virtualRow = 0;
+
+        while (flattenedIndex < flattenedEntries.size()) {
+            DisplayEntry entry = flattenedEntries.get(flattenedIndex);
+
+            // If the current virtual row is above the scroll, skip it
+            if (virtualRow < scrollIndex / COLUMNS) {
+                if (entry instanceof HeaderEntry) {
+                    virtualRow++;
+                    flattenedIndex++;
+                } else if (entry instanceof ItemEntry) {
+                    // Count up to one item row (COLUMNS entries)
+                    int itemCount = 0;
+                    while (flattenedIndex < flattenedEntries.size() && itemCount < COLUMNS) {
+                        DisplayEntry subEntry = flattenedEntries.get(flattenedIndex);
+                        if (!(subEntry instanceof ItemEntry)) break;
+                        itemCount++;
+                        flattenedIndex++;
+                    }
+                    virtualRow++;
+                }
+                continue;
+            }
+
+            // Render visible content after scrollIndex
+            if (renderedRows >= visibleRows) break;
 
             if (entry instanceof HeaderEntry(String groupName)) {
-                // Render group label spanning all columns
                 guiGraphics.drawString(font, groupName, startX + 3, rowY + 3, 0xFFFFFF);
-
                 renderToggleButtons(guiGraphics, startX + 3, rowY + 3, groupName);
-                rowY += 18; // Label height
-                rendered++; // Count as a row
+                rowY += 18;
+                renderedRows++;
+                flattenedIndex++;
+                virtualRow++;
             } else if (entry instanceof ItemEntry) {
-                int rowItemCount = 0;
+                int itemCount = 0;
+                int rowStartIndex = flattenedIndex;
 
-                // Render up to COLUMNS per row
-                while (rowItemCount < COLUMNS && index < flattenedEntries.size()) {
-                    DisplayEntry subEntry = flattenedEntries.get(index);
+                while (itemCount < COLUMNS && flattenedIndex < flattenedEntries.size()) {
+                    DisplayEntry subEntry = flattenedEntries.get(flattenedIndex);
                     if (!(subEntry instanceof ItemEntry(ItemStack stack))) break;
 
-                    int col = rowItemCount;
+                    int col = itemCount;
                     int x = startX + col * 18;
 
                     if (col == 0) {
-                        RenderSystem.setShaderTexture(0, GUI_ROW_TEXTURE); // Make sure to bind row texture
+                        RenderSystem.setShaderTexture(0, GUI_ROW_TEXTURE);
                         guiGraphics.blit(GUI_ROW_TEXTURE, startX, rowY, 0, 0, 162, 18, 162, 18);
                     }
 
@@ -206,7 +232,6 @@ public class ManagerScreen extends AbstractContainerScreen<ManagerMenu> implemen
                         guiGraphics.renderItem(stack, x + 1, rowY + 1);
                         renderLinkerItemBackground(stack, guiGraphics, x + 1, rowY + 1);
 
-                        // Hover tooltips
                         if (mouseX >= x && mouseX < x + 16 && mouseY >= rowY && mouseY < rowY + 16) {
                             BlockPos leverPos = stack.get(ModDataComponents.COORDINATES);
                             Component extraLabel = null;
@@ -229,16 +254,21 @@ public class ManagerScreen extends AbstractContainerScreen<ManagerMenu> implemen
                         }
                     }
 
-                    index++;
-                    rowItemCount++;
+                    itemCount++;
+                    flattenedIndex++;
                 }
 
-                rowY += 18; // One row of items rendered
-                rendered++;
-                continue; // Skip index++ since it was handled in inner loop
+                if (flattenedIndex > rowStartIndex) {
+                    rowY += 18;
+                    renderedRows++;
+                    virtualRow++;
+                } else {
+                    // Avoid infinite loop
+                    flattenedIndex++;
+                }
+            } else {
+                flattenedIndex++; // Fallback safeguard
             }
-
-            index++;
         }
     }
 
@@ -298,36 +328,56 @@ public class ManagerScreen extends AbstractContainerScreen<ManagerMenu> implemen
 
         ItemStack carried = menu.getCarried();
         int rowY = startY;
-        int rendered = 0;
-        int index = scrollIndex;
-
+        int flattenedIndex = 0;
+        int virtualRow = 0;
+        int renderedRows = 0;
         String group = "";
 
-        while (rendered < itemsPerPage && index < flattenedEntries.size()) {
-            DisplayEntry entry = flattenedEntries.get(index);
+        while (flattenedIndex < flattenedEntries.size()) {
+            DisplayEntry entry = flattenedEntries.get(flattenedIndex);
 
-            // Just a label row we can skip it
+            // Skip rows above scroll
+            if (virtualRow < scrollIndex / COLUMNS) {
+                if (entry instanceof HeaderEntry) {
+                    virtualRow++;
+                    flattenedIndex++;
+                } else if (entry instanceof ItemEntry) {
+                    int itemCount = 0;
+                    while (itemCount < COLUMNS && flattenedIndex < flattenedEntries.size()) {
+                        if (!(flattenedEntries.get(flattenedIndex) instanceof ItemEntry)) break;
+                        itemCount++;
+                        flattenedIndex++;
+                    }
+                    virtualRow++;
+                }
+                continue;
+            }
+
+            // Stop when we've handled visible rows
+            if (renderedRows >= visibleRows) break;
+
             if (entry instanceof HeaderEntry(String groupName)) {
                 int rowX = startX + 137;
                 if (mouseX >= rowX && mouseX < rowX + 20 && mouseY >= rowY && mouseY < rowY + 11) {
                     assert Minecraft.getInstance().player != null;
                     Minecraft.getInstance().player.connection.send(new PacketToggleAllLevers(blockEntity.getBlockPos(), groupName));
+                    return true;
                 }
-                rowY += 15;
-                index++;
-                rendered++;
-                group = groupName;
-                continue;
-            }
 
-            if (entry instanceof ItemEntry) {
-                int rowItemCount = 0;
-                while (rowItemCount < COLUMNS && index < flattenedEntries.size()) {
-                    DisplayEntry subEntry = flattenedEntries.get(index);
+                rowY += 18;
+                flattenedIndex++;
+                virtualRow++;
+                renderedRows++;
+                group = groupName;
+            } else if (entry instanceof ItemEntry) {
+                int itemCount = 0;
+                int rowStartIndex = flattenedIndex;
+
+                while (itemCount < COLUMNS && flattenedIndex < flattenedEntries.size()) {
+                    DisplayEntry subEntry = flattenedEntries.get(flattenedIndex);
                     if (!(subEntry instanceof ItemEntry(ItemStack stack))) break;
 
-                    int col = rowItemCount;
-                    int x = startX + col * slotSize;
+                    int x = startX + itemCount * slotSize;
                     int y = rowY;
 
                     if (mouseX >= x && mouseX < x + 16 && mouseY >= y && mouseY < y + 16) {
@@ -339,41 +389,42 @@ public class ManagerScreen extends AbstractContainerScreen<ManagerMenu> implemen
                             } else if (button == 0) {
                                 assert player != null;
                                 int clickType = carried.isEmpty() ? ClickType.PICKUP.ordinal() : ClickType.SWAP.ordinal();
-
                                 if (isShiftDown()) {
                                     clickType = ClickType.QUICK_MOVE.ordinal();
                                 }
-
                                 player.connection.send(new MenuInteractPacketC2S(stack, clickType, 0, blockEntity.getBlockPos(), group));
                             }
                         } else if (!carried.isEmpty()) {
                             assert player != null;
-                            player.connection.send(new PacketAddLinkerToGroup(blockEntity.getBlockPos(), group, carried));
-                            menu.setCarried(ItemStack.EMPTY);
+                            player.connection.send(new MenuInteractPacketC2S(ItemStack.EMPTY, ClickType.PICKUP_ALL.ordinal(), 0, blockEntity.getBlockPos(), group));
                         }
                         return true;
                     }
 
-                    rowItemCount++;
-                    index++;
+                    itemCount++;
+                    flattenedIndex++;
                 }
 
-                rowY += 18;
-                rendered++;
-                continue;
+                if (flattenedIndex > rowStartIndex) {
+                    rowY += 18;
+                    renderedRows++;
+                    virtualRow++;
+                } else {
+                    flattenedIndex++; // Prevent infinite loop
+                }
+            } else {
+                flattenedIndex++;
             }
-
-            index++;
         }
 
-        // Handle scrollbar click
+        // Scrollbar interaction
         int scrollbarX = leftPos + SCROLLBAR_X_OFFSET + 1;
         int scrollbarY = topPos + SCROLLBAR_Y_OFFSET;
         int handleHeight = 15;
-        float maxScroll = (float) ((blockEntity.getAllItemSize() + COLUMNS - 1) / COLUMNS - visibleRows);
 
-        if (maxScroll > 0) {
-            float scrollFraction = scrollIndex / (maxScroll * COLUMNS);
+        float maxScrollRows = Math.max(0, getTotalRows() - visibleRows);
+        if (maxScrollRows > 0) {
+            float scrollFraction = (float) (scrollIndex / COLUMNS) / maxScrollRows;
             int handleY = Math.max(scrollbarY + (int) ((getScrollbarHeight() - handleHeight) * scrollFraction), scrollbarY + 1);
 
             if (MouseUtil.isMouseOver(mouseX, mouseY, scrollbarX, handleY, SCROLLBAR_WIDTH, handleHeight)) {

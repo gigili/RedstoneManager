@@ -100,10 +100,18 @@ public class ManagerMenu extends AbstractContainerMenu implements Interact {
                     final var result = itemStack.copy();
                     if (!result.isEmpty()) {
                         //blockEntity.removeLinker(blockEntity.findLinkerIndex(blockEntity.getLinkers(), itemStack));
-                        if (blockEntity.getItems().entrySet().stream().findFirst().isPresent()) {
-                            setCarried(result);
-                            blockEntity.removeItemFromGroup(blockEntity.getItems().entrySet().stream().findFirst().get().getKey(), itemStack);
-                        }
+                        setCarried(result);
+                        blockEntity.removeItemFromGroup(groupName, itemStack);
+                    }
+                }
+            }
+            case PICKUP_ALL -> {
+                if (!getCarried().isEmpty() && itemStack.isEmpty()) {
+                    final var result = getCarried().copy();
+                    if (!result.isEmpty()) {
+                        //blockEntity.removeLinker(blockEntity.findLinkerIndex(blockEntity.getLinkers(), itemStack));
+                        setCarried(ItemStack.EMPTY);
+                        blockEntity.addItemToGroup(groupName, result);
                     }
                 }
             }
@@ -120,10 +128,8 @@ public class ManagerMenu extends AbstractContainerMenu implements Interact {
             case QUICK_MOVE -> {
                 ItemStack itemToRemove = itemStack.copy();
                 if (moveItemStackTo(itemStack, VANILLA_FIRST_SLOT_INDEX, VANILLA_FIRST_SLOT_INDEX + VANILLA_SLOT_COUNT, false)) {
-                    if (blockEntity.getItems().entrySet().stream().findFirst().isPresent()) {
-                        blockEntity.removeItemFromGroup(groupName, itemToRemove);
-                        setCarried(ItemStack.EMPTY);
-                    }
+                    blockEntity.removeItemFromGroup(groupName, itemToRemove);
+                    setCarried(ItemStack.EMPTY);
                 }
             }
             case null, default -> {
