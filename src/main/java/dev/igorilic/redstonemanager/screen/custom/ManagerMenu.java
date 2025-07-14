@@ -95,21 +95,19 @@ public class ManagerMenu extends AbstractContainerMenu implements Interact {
     @Override
     public void clicked(ItemStack itemStack, CompoundTag extraData, ClickType clickType, int button, String groupName) {
         switch (clickType) {
-            case PICKUP -> {
+            case PICKUP -> { // Take item out of a manager
                 if (getCarried().isEmpty() && itemStack != null) {
                     final var result = itemStack.copy();
                     if (!result.isEmpty()) {
-                        //blockEntity.removeLinker(blockEntity.findLinkerIndex(blockEntity.getLinkers(), itemStack));
                         setCarried(result);
                         blockEntity.removeItemFromGroup(groupName, itemStack);
                     }
                 }
             }
-            case PICKUP_ALL -> {
+            case PICKUP_ALL -> { // Put item into a manager
                 if (!getCarried().isEmpty() && itemStack.isEmpty()) {
                     final var result = getCarried().copy();
                     if (!result.isEmpty()) {
-                        //blockEntity.removeLinker(blockEntity.findLinkerIndex(blockEntity.getLinkers(), itemStack));
                         setCarried(ItemStack.EMPTY);
                         blockEntity.addItemToGroup(groupName, result);
                     }
@@ -125,7 +123,7 @@ public class ManagerMenu extends AbstractContainerMenu implements Interact {
                     }*/
                 }
             }
-            case QUICK_MOVE -> {
+            case QUICK_MOVE -> { // shift + click out of a manager
                 ItemStack itemToRemove = itemStack.copy();
                 if (moveItemStackTo(itemStack, VANILLA_FIRST_SLOT_INDEX, VANILLA_FIRST_SLOT_INDEX + VANILLA_SLOT_COUNT, false)) {
                     blockEntity.removeItemFromGroup(groupName, itemToRemove);

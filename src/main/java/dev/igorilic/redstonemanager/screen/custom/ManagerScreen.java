@@ -331,7 +331,7 @@ public class ManagerScreen extends AbstractContainerScreen<ManagerMenu> implemen
         int flattenedIndex = 0;
         int virtualRow = 0;
         int renderedRows = 0;
-        String group = "";
+        String group = "Default";
 
         while (flattenedIndex < flattenedEntries.size()) {
             DisplayEntry entry = flattenedEntries.get(flattenedIndex);
