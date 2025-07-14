@@ -7,8 +7,10 @@ import dev.igorilic.redstonemanager.block.entity.RedstoneManagerBlockEntity;
 import dev.igorilic.redstonemanager.component.ModDataComponents;
 import dev.igorilic.redstonemanager.item.custom.RedstoneLinkerItem;
 import dev.igorilic.redstonemanager.network.MenuInteractPacketC2S;
+import dev.igorilic.redstonemanager.network.PacketToggleAllLevers;
 import dev.igorilic.redstonemanager.network.PacketToggleLever;
 import dev.igorilic.redstonemanager.util.IUpdatable;
+import dev.igorilic.redstonemanager.util.LinkerGroup;
 import dev.igorilic.redstonemanager.util.MousePositionManagerUtil;
 import dev.igorilic.redstonemanager.util.MouseUtil;
 import dev.igorilic.redstonemanager.util.entries.DisplayEntry;
@@ -43,6 +45,7 @@ public class ManagerScreen extends AbstractContainerScreen<ManagerMenu> implemen
     private static final ResourceLocation GUI_NO_SCROLL_TEXTURE = ResourceLocation.fromNamespaceAndPath(RedstoneManager.MOD_ID, "textures/gui/gui_no_slots_no_scroll_large.png");
     private static final ResourceLocation GUI_SCROLL_TEXTURE = ResourceLocation.fromNamespaceAndPath(RedstoneManager.MOD_ID, "textures/gui/gui_scroll.png");
     private static final ResourceLocation GUI_ROW_TEXTURE = ResourceLocation.fromNamespaceAndPath(RedstoneManager.MOD_ID, "textures/gui/gui_row.png");
+    private static final ResourceLocation GUI_TOGGLE_BUTTONS = ResourceLocation.fromNamespaceAndPath(RedstoneManager.MOD_ID, "textures/gui/gui_toggle_buttons.png");
 
     private static final int SCROLLBAR_WIDTH = 12;
     private static final int SCROLLBAR_X_OFFSET = 174; // adjust to fit GUI width
@@ -59,13 +62,13 @@ public class ManagerScreen extends AbstractContainerScreen<ManagerMenu> implemen
     private int dragOffsetY = 0;
 
     private final List<DisplayEntry> flattenedEntries = new ArrayList<>();
-    private Map<String, List<ItemStack>> items;
+    private Map<String, LinkerGroup> items;
 
     private void regenerateFlattenedEntries() {
         flattenedEntries.clear();
-        for (Map.Entry<String, List<ItemStack>> entry : items.entrySet()) {
+        for (Map.Entry<String, LinkerGroup> entry : items.entrySet()) {
             flattenedEntries.add(new HeaderEntry(entry.getKey()));
-            for (ItemStack stack : entry.getValue()) {
+            for (ItemStack stack : entry.getValue().getItems()) {
                 flattenedEntries.add(new ItemEntry(stack));
             }
         }
@@ -141,7 +144,6 @@ public class ManagerScreen extends AbstractContainerScreen<ManagerMenu> implemen
         this.renderTooltip(guiGraphics, mouseX, mouseY);
 
         renderItems(guiGraphics, mouseX, mouseY);
-
         renderTooltip(guiGraphics, mouseX, mouseY);
     }
 
@@ -158,6 +160,8 @@ public class ManagerScreen extends AbstractContainerScreen<ManagerMenu> implemen
             if (entry instanceof HeaderEntry(String groupName)) {
                 // Render group label spanning all columns
                 guiGraphics.drawString(font, groupName, startX + 3, rowY + 3, 0xFFFFFF);
+
+                renderToggleButtons(guiGraphics, startX + 3, rowY + 3, groupName);
                 rowY += 15; // Label height
                 rendered++; // Count as a row
             } else if (entry instanceof ItemEntry itemEntry) {
@@ -216,6 +220,17 @@ public class ManagerScreen extends AbstractContainerScreen<ManagerMenu> implemen
         }
     }
 
+    private void renderToggleButtons(@NotNull GuiGraphics guiGraphics, int startX, int startY, String groupName) {
+        LinkerGroup linker = items.get(groupName);
+        boolean allOn = linker.isPowered();
+
+        if (allOn) {
+            guiGraphics.blit(GUI_TOGGLE_BUTTONS, startX + 137, startY - 1, 0, 0, 20, 11, 41, 11);
+        } else {
+            guiGraphics.blit(GUI_TOGGLE_BUTTONS, startX + 137, startY - 1, 20.5f, 0, 20, 11, 41, 11);
+        }
+    }
+
     private void renderLinkerItemBackground(ItemStack linkerItem, GuiGraphics guiGraphics, int slotX, int slotY) {
         boolean isLeverOn = isLeverOn(linkerItem);
         int color = isLeverOn ? 0x7700FF00 : 0x77FF0000; // Green/Red with transparency
@@ -265,7 +280,12 @@ public class ManagerScreen extends AbstractContainerScreen<ManagerMenu> implemen
             DisplayEntry entry = flattenedEntries.get(index);
 
             // Just a label row we can skip it
-            if (entry instanceof HeaderEntry) {
+            if (entry instanceof HeaderEntry(String groupName)) {
+                int rowX = startX + 137;
+                if (mouseX >= rowX && mouseX < rowX + 20 && mouseY >= rowY && mouseY < rowY + 11) {
+                    assert Minecraft.getInstance().player != null;
+                    Minecraft.getInstance().player.connection.send(new PacketToggleAllLevers(blockEntity.getBlockPos(), groupName));
+                }
                 rowY += 12;
                 index++;
                 rendered++;

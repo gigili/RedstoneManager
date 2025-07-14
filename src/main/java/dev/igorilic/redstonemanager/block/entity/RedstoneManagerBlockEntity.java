@@ -4,6 +4,7 @@ import dev.igorilic.redstonemanager.component.ModDataComponents;
 import dev.igorilic.redstonemanager.item.custom.RedstoneLinkerItem;
 import dev.igorilic.redstonemanager.screen.custom.ManagerMenu;
 import dev.igorilic.redstonemanager.util.IUpdatable;
+import dev.igorilic.redstonemanager.util.LinkerGroup;
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.HolderLookup;
@@ -32,7 +33,7 @@ import org.jetbrains.annotations.Nullable;
 import java.util.*;
 
 public class RedstoneManagerBlockEntity extends BlockEntity implements MenuProvider {
-    private final Map<String, List<ItemStack>> items = new HashMap<>();
+    private final Map<String, LinkerGroup> items = new HashMap<>();
 
     public RedstoneManagerBlockEntity(BlockPos pos, BlockState blockState) {
         super(ModBlockEntities.MANAGER_BE.get(), pos, blockState);
@@ -56,19 +57,19 @@ public class RedstoneManagerBlockEntity extends BlockEntity implements MenuProvi
         }
     }*/
 
-    public Map<String, List<ItemStack>> getItems() {
+    public Map<String, LinkerGroup> getItems() {
         return Collections.unmodifiableMap(items);
     }
 
     public void createGroup(String groupName) {
-        items.computeIfAbsent(groupName, k -> new ArrayList<>()).add(ItemStack.EMPTY);
+        items.computeIfAbsent(groupName, k -> new LinkerGroup(groupName)).addItem(ItemStack.EMPTY);
         setChanged();
         level.sendBlockUpdated(getBlockPos(), getBlockState(), getBlockState(), Block.UPDATE_ALL);
     }
 
     public void addItemToGroup(String groupName, ItemStack item) {
         if (!(item.getItem() instanceof RedstoneLinkerItem)) return;
-        this.items.computeIfAbsent(groupName, k -> new ArrayList<>()).add(item);
+        this.items.computeIfAbsent(groupName, k -> new LinkerGroup(groupName)).addItem(item);
 
         setChanged();
         level.sendBlockUpdated(getBlockPos(), getBlockState(), getBlockState(), Block.UPDATE_ALL);
@@ -78,35 +79,14 @@ public class RedstoneManagerBlockEntity extends BlockEntity implements MenuProvi
         if (!this.items.containsKey(groupName)) return;
         if (!(item.getItem() instanceof RedstoneLinkerItem)) return;
 
-        int index = findLinkerIndex(this.items.get(groupName), item);
-
-        if (index != -1) {
-            this.items.get(groupName).remove(index);
-            /*if (this.items.get(groupName).isEmpty()) {
-                this.items.remove(groupName);
-            }*/
-        }
+        items.get(groupName).removeItem(item);
 
         setChanged();
         level.sendBlockUpdated(getBlockPos(), getBlockState(), getBlockState(), Block.UPDATE_ALL);
     }
 
     public int getAllItemSize() {
-        return items.values().stream().mapToInt(List::size).sum();
-    }
-
-    public int findLinkerIndex(List<ItemStack> linkers, ItemStack target) {
-        for (int i = 0; i < linkers.size(); i++) {
-            ItemStack linker = linkers.get(i);
-            if (linker.has(ModDataComponents.ITEM_UUID) && target.has(ModDataComponents.ITEM_UUID)) {
-                if (Objects.equals(linker.get(ModDataComponents.ITEM_UUID), target.get(ModDataComponents.ITEM_UUID))) {
-                    return i;
-                }
-            } else if (ItemStack.isSameItemSameComponents(linkers.get(i), target)) {
-                return i;
-            }
-        }
-        return -1;
+        return items.values().stream().map(LinkerGroup::getItems).mapToInt(List::size).sum();
     }
 
     @Override
@@ -114,12 +94,13 @@ public class RedstoneManagerBlockEntity extends BlockEntity implements MenuProvi
         super.saveAdditional(tag, registries);
         ListTag groupList = new ListTag();
 
-        for (Map.Entry<String, List<ItemStack>> entry : items.entrySet()) {
+        for (Map.Entry<String, LinkerGroup> entry : items.entrySet()) {
             CompoundTag groupTag = new CompoundTag();
             groupTag.putString("Name", entry.getKey());
+            groupTag.putBoolean("IsPowered", entry.getValue().isPowered());
 
             ListTag itemList = new ListTag();
-            for (ItemStack stack : entry.getValue()) {
+            for (ItemStack stack : entry.getValue().getItems()) {
                 itemList.add(stack.save(registries));
             }
 
@@ -141,6 +122,7 @@ public class RedstoneManagerBlockEntity extends BlockEntity implements MenuProvi
             for (Tag groupTagBase : groupList) {
                 CompoundTag groupTag = (CompoundTag) groupTagBase;
                 String name = groupTag.getString("Name");
+                boolean isPowered = groupTag.getBoolean("IsPowered");
 
                 List<ItemStack> stacks = new ArrayList<>();
                 ListTag itemList = groupTag.getList("Links", Tag.TAG_COMPOUND);
@@ -151,7 +133,8 @@ public class RedstoneManagerBlockEntity extends BlockEntity implements MenuProvi
                     stacks.add(stack);
                 }
 
-                this.items.put(name, stacks);
+
+                this.items.put(name, new LinkerGroup(name, isPowered, stacks));
             }
         }
 
@@ -209,5 +192,28 @@ public class RedstoneManagerBlockEntity extends BlockEntity implements MenuProvi
         boolean isLeverPowered = state.getValue(LeverBlock.POWERED);
         level.setBlock(leverPos, state.setValue(LeverBlock.POWERED, !isLeverPowered), Block.UPDATE_ALL);
         level.playSound(null, leverPos, SoundEvents.LEVER_CLICK, SoundSource.BLOCKS, 0.3F, isLeverPowered ? 0.5F : 0.6F);
+    }
+
+    public void toggleAllLinkedLever(String groupName) {
+        if (level == null || level.isClientSide) return;
+        if (!items.containsKey(groupName)) return;
+
+        boolean allOn = items.get(groupName).isPowered();
+
+        for (ItemStack stack : items.get(groupName).getItems()) {
+            if (!(stack.getItem() instanceof RedstoneLinkerItem)) continue;
+
+            BlockPos leverPos = stack.get(ModDataComponents.COORDINATES);
+
+            if (leverPos == null) continue;
+
+            BlockState state = level.getBlockState(leverPos);
+            if (!state.is(Blocks.LEVER)) continue;
+
+            level.setBlock(leverPos, state.setValue(LeverBlock.POWERED, !allOn), Block.UPDATE_ALL);
+        }
+
+        items.get(groupName).setPowered(!allOn);
+        level.playSound(null, getBlockPos(), SoundEvents.LEVER_CLICK, SoundSource.BLOCKS, 0.3F, !allOn ? 0.5F : 0.6F);
     }
 }

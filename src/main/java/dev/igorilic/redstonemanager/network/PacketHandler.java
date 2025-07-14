@@ -27,6 +27,12 @@ public class PacketHandler {
         );
 
         registrar.playToServer(
+                PacketToggleAllLevers.TYPE,
+                PacketToggleAllLevers.STREAM_CODEC,
+                PacketToggleAllLevers.HANDLER
+        );
+
+        registrar.playToServer(
                 MenuInteractPacketC2S.TYPE,
                 MenuInteractPacketC2S.STREAM_CODEC,
                 MenuInteractPacketC2S.HANDLER
