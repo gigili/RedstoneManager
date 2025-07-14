@@ -93,7 +93,7 @@ public class ManagerMenu extends AbstractContainerMenu implements Interact {
     }
 
     @Override
-    public void clicked(ItemStack itemStack, CompoundTag extraData, ClickType clickType, int button) {
+    public void clicked(ItemStack itemStack, CompoundTag extraData, ClickType clickType, int button, String groupName) {
         switch (clickType) {
             case PICKUP -> {
                 if (getCarried().isEmpty() && itemStack != null) {
@@ -121,7 +121,7 @@ public class ManagerMenu extends AbstractContainerMenu implements Interact {
                 ItemStack itemToRemove = itemStack.copy();
                 if (moveItemStackTo(itemStack, VANILLA_FIRST_SLOT_INDEX, VANILLA_FIRST_SLOT_INDEX + VANILLA_SLOT_COUNT, false)) {
                     if (blockEntity.getItems().entrySet().stream().findFirst().isPresent()) {
-                        blockEntity.removeItemFromGroup(blockEntity.getItems().entrySet().stream().findFirst().get().getKey(), itemToRemove);
+                        blockEntity.removeItemFromGroup(groupName, itemToRemove);
                         setCarried(ItemStack.EMPTY);
                     }
                 }

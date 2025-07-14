@@ -17,10 +17,10 @@ import net.neoforged.neoforge.network.handling.IPayloadHandler;
 import org.jetbrains.annotations.NotNull;
 
 public record MenuInteractPacketC2S(ItemStack itemStack, CompoundTag extraData, int clickType, int button,
-                                    BlockPos managerPos) implements CustomPacketPayload {
+                                    BlockPos managerPos, String groupName) implements CustomPacketPayload {
 
-    public MenuInteractPacketC2S(ItemStack itemStack, int clickType, int button, BlockPos managerPos) {
-        this(itemStack, new CompoundTag(), clickType, button, managerPos);
+    public MenuInteractPacketC2S(ItemStack itemStack, int clickType, int button, BlockPos managerPos, String groupName) {
+        this(itemStack, new CompoundTag(), clickType, button, managerPos, groupName);
     }
 
     public static final CustomPacketPayload.Type<MenuInteractPacketC2S> TYPE = new CustomPacketPayload.Type<>(ResourceLocation.fromNamespaceAndPath(RedstoneManager.MOD_ID, "interact_menu"));
@@ -30,7 +30,7 @@ public record MenuInteractPacketC2S(ItemStack itemStack, CompoundTag extraData, 
         final var player = ctx.player();
 
         if (player.containerMenu instanceof Interact interact) {
-            interact.clicked(pkt.itemStack(), pkt.extraData(), ClickType.values()[pkt.clickType()], pkt.button());
+            interact.clicked(pkt.itemStack(), pkt.extraData(), ClickType.values()[pkt.clickType()], pkt.button(), pkt.groupName);
         }
 
         if (ctx.player() instanceof ServerPlayer serverPlayer) {
@@ -47,6 +47,7 @@ public record MenuInteractPacketC2S(ItemStack itemStack, CompoundTag extraData, 
             ByteBufCodecs.INT, MenuInteractPacketC2S::clickType,
             ByteBufCodecs.INT, MenuInteractPacketC2S::button,
             BlockPos.STREAM_CODEC, MenuInteractPacketC2S::managerPos,
+            ByteBufCodecs.STRING_UTF8, MenuInteractPacketC2S::groupName,
             MenuInteractPacketC2S::new
     );
 

@@ -6,9 +6,7 @@ import dev.igorilic.redstonemanager.RedstoneManager;
 import dev.igorilic.redstonemanager.block.entity.RedstoneManagerBlockEntity;
 import dev.igorilic.redstonemanager.component.ModDataComponents;
 import dev.igorilic.redstonemanager.item.custom.RedstoneLinkerItem;
-import dev.igorilic.redstonemanager.network.MenuInteractPacketC2S;
-import dev.igorilic.redstonemanager.network.PacketToggleAllLevers;
-import dev.igorilic.redstonemanager.network.PacketToggleLever;
+import dev.igorilic.redstonemanager.network.*;
 import dev.igorilic.redstonemanager.util.IUpdatable;
 import dev.igorilic.redstonemanager.util.LinkerGroup;
 import dev.igorilic.redstonemanager.util.MousePositionManagerUtil;
@@ -68,8 +66,26 @@ public class ManagerScreen extends AbstractContainerScreen<ManagerMenu> implemen
         flattenedEntries.clear();
         for (Map.Entry<String, LinkerGroup> entry : items.entrySet()) {
             flattenedEntries.add(new HeaderEntry(entry.getKey()));
-            for (ItemStack stack : entry.getValue().getItems()) {
+            List<ItemStack> stacks = entry.getValue().getItems();
+            for (ItemStack stack : stacks) {
                 flattenedEntries.add(new ItemEntry(stack));
+            }
+
+            int remainder = stacks.size() % 9;
+            boolean lastIsEmpty = !stacks.isEmpty() && stacks.getLast().isEmpty();
+
+            int toAdd = 9;
+
+            if (remainder != 0) {
+                toAdd = 9 - remainder;
+            }
+
+            if (lastIsEmpty) {
+                toAdd = 0;
+            }
+
+            for (int i = 0; i < toAdd; i++) {
+                flattenedEntries.add(new ItemEntry(ItemStack.EMPTY));
             }
         }
     }
@@ -94,7 +110,8 @@ public class ManagerScreen extends AbstractContainerScreen<ManagerMenu> implemen
         Button btn = Button.builder(
                         Component.literal("New Group"),
                         (b) -> {
-                            blockEntity.createGroup("Default #" + ThreadLocalRandom.current().nextInt(1000));
+                            assert Minecraft.getInstance().player != null;
+                            Minecraft.getInstance().player.connection.send(new PacketCreateGroup(blockEntity.getBlockPos(), "Default #" + ThreadLocalRandom.current().nextInt(1000)));
                         }
                 )
                 .bounds(leftPos + imageWidth - 84, topPos + 1, 60, 15)
@@ -164,7 +181,7 @@ public class ManagerScreen extends AbstractContainerScreen<ManagerMenu> implemen
                 renderToggleButtons(guiGraphics, startX + 3, rowY + 3, groupName);
                 rowY += 15; // Label height
                 rendered++; // Count as a row
-            } else if (entry instanceof ItemEntry itemEntry) {
+            } else if (entry instanceof ItemEntry) {
                 int rowItemCount = 0;
 
                 // Render up to COLUMNS per row
@@ -276,6 +293,8 @@ public class ManagerScreen extends AbstractContainerScreen<ManagerMenu> implemen
         int rendered = 0;
         int index = scrollIndex;
 
+        String group = "";
+
         while (rendered < itemsPerPage && index < flattenedEntries.size()) {
             DisplayEntry entry = flattenedEntries.get(index);
 
@@ -286,9 +305,10 @@ public class ManagerScreen extends AbstractContainerScreen<ManagerMenu> implemen
                     assert Minecraft.getInstance().player != null;
                     Minecraft.getInstance().player.connection.send(new PacketToggleAllLevers(blockEntity.getBlockPos(), groupName));
                 }
-                rowY += 12;
+                rowY += 15;
                 index++;
                 rendered++;
+                group = groupName;
                 continue;
             }
 
@@ -303,8 +323,8 @@ public class ManagerScreen extends AbstractContainerScreen<ManagerMenu> implemen
                     int y = rowY;
 
                     if (mouseX >= x && mouseX < x + 16 && mouseY >= y && mouseY < y + 16) {
+                        LocalPlayer player = Minecraft.getInstance().player;
                         if (!stack.isEmpty()) {
-                            LocalPlayer player = Minecraft.getInstance().player;
                             if (button == 1) {
                                 assert player != null;
                                 player.connection.send(new PacketToggleLever(blockEntity.getBlockPos(), stack));
@@ -316,8 +336,12 @@ public class ManagerScreen extends AbstractContainerScreen<ManagerMenu> implemen
                                     clickType = ClickType.QUICK_MOVE.ordinal();
                                 }
 
-                                player.connection.send(new MenuInteractPacketC2S(stack, clickType, 0, blockEntity.getBlockPos()));
+                                player.connection.send(new MenuInteractPacketC2S(stack, clickType, 0, blockEntity.getBlockPos(), group));
                             }
+                        } else if (!carried.isEmpty()) {
+                            assert player != null;
+                            player.connection.send(new PacketAddLinkerToGroup(blockEntity.getBlockPos(), group, carried));
+                            menu.setCarried(ItemStack.EMPTY);
                         }
                         return true;
                     }

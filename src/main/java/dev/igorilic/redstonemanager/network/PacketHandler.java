@@ -27,6 +27,18 @@ public class PacketHandler {
         );
 
         registrar.playToServer(
+                PacketCreateGroup.TYPE,
+                PacketCreateGroup.STREAM_CODEC,
+                PacketCreateGroup.HANDLER
+        );
+
+        registrar.playToServer(
+                PacketAddLinkerToGroup.TYPE,
+                PacketAddLinkerToGroup.STREAM_CODEC,
+                PacketAddLinkerToGroup.HANDLER
+        );
+
+        registrar.playToServer(
                 PacketToggleAllLevers.TYPE,
                 PacketToggleAllLevers.STREAM_CODEC,
                 PacketToggleAllLevers.HANDLER
