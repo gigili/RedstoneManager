@@ -15,9 +15,12 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.network.protocol.Packet;
 import net.minecraft.network.protocol.game.ClientGamePacketListener;
 import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
+import net.minecraft.sounds.SoundEvent;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
+import net.minecraft.world.Containers;
 import net.minecraft.world.MenuProvider;
+import net.minecraft.world.SimpleContainer;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
@@ -75,6 +78,38 @@ public class RedstoneManagerBlockEntity extends BlockEntity implements MenuProvi
 
         setChanged();
         level.sendBlockUpdated(getBlockPos(), getBlockState(), getBlockState(), Block.UPDATE_ALL);
+    }
+
+    public void renameGroup(String oldName, String newName) {
+        if (!items.containsKey(oldName)) return;
+        if (newName.isEmpty()) return;
+
+        LinkerGroup group = items.get(oldName);
+        group.setGroupName(newName);
+
+        items.remove(oldName);
+        items.put(newName, group);
+    }
+
+    public void deleteGroup(String groupName) {
+        if (!items.containsKey(groupName)) return;
+        LinkerGroup group = items.get(groupName);
+        List<ItemStack> stacks = group.getItems();
+
+        if (!stacks.isEmpty()) {
+            SimpleContainer inv = new SimpleContainer(stacks.size());
+            int index = 0;
+            for (ItemStack stack : stacks) {
+                inv.setItem(index, stack);
+                index++;
+            }
+
+            if (level != null) {
+                Containers.dropContents(level, worldPosition, inv);
+            }
+        }
+
+        items.remove(groupName);
     }
 
     private void updateGroupPoweredState(String groupName) {
@@ -260,5 +295,10 @@ public class RedstoneManagerBlockEntity extends BlockEntity implements MenuProvi
             return group.getGroupName();
         }
         return null;
+    }
+
+    public void playSound(SoundEvent soundEvent, float volume, float pitch) {
+        if (level == null || level.isClientSide) return;
+        level.playSound(null, getBlockPos(), soundEvent, SoundSource.BLOCKS, volume, pitch);
     }
 }

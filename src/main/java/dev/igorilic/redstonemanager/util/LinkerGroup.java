@@ -8,7 +8,7 @@ import java.util.List;
 import java.util.Objects;
 
 public class LinkerGroup {
-    private final String groupName;
+    private String groupName;
     private boolean isPowered = false;
     private List<ItemStack> items = new ArrayList<>();
 
@@ -29,6 +29,10 @@ public class LinkerGroup {
 
     public String getGroupName() {
         return groupName;
+    }
+
+    public void setGroupName(String groupName) {
+        this.groupName = groupName;
     }
 
     public boolean isPowered() {

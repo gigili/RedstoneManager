@@ -21,21 +21,9 @@ public class PacketHandler {
         );
 
         registrar.playToServer(
-                PacketMoveLinker.TYPE,
-                PacketMoveLinker.STREAM_CODEC,
-                PacketMoveLinker.HANDLER
-        );
-
-        registrar.playToServer(
                 PacketCreateGroup.TYPE,
                 PacketCreateGroup.STREAM_CODEC,
                 PacketCreateGroup.HANDLER
-        );
-
-        registrar.playToServer(
-                PacketAddLinkerToGroup.TYPE,
-                PacketAddLinkerToGroup.STREAM_CODEC,
-                PacketAddLinkerToGroup.HANDLER
         );
 
         registrar.playToServer(
@@ -45,9 +33,27 @@ public class PacketHandler {
         );
 
         registrar.playToServer(
+                PacketRenameGroup.TYPE,
+                PacketRenameGroup.STREAM_CODEC,
+                PacketRenameGroup.HANDLER
+        );
+
+        registrar.playToServer(
+                PacketDeleteGroup.TYPE,
+                PacketDeleteGroup.STREAM_CODEC,
+                PacketDeleteGroup.HANDLER
+        );
+
+        registrar.playToServer(
                 MenuInteractPacketC2S.TYPE,
                 MenuInteractPacketC2S.STREAM_CODEC,
                 MenuInteractPacketC2S.HANDLER
+        );
+
+        registrar.playToServer(
+                PacketPlaySound.TYPE,
+                PacketPlaySound.STREAM_CODEC,
+                PacketPlaySound.HANDLER
         );
     }
 }

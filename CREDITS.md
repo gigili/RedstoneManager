@@ -9,8 +9,7 @@ Give credit where credit is due.
 ## Textures
 
 * [MangoRage - SWISS](https://github.com/RealMangorage/swss)
-* [Settings icon by Icons8](https://icons8.com/icon/12784/settings)
-* [Toggle icon by Icons8](https://icons8.com/icon/Siu41BosRjeg/toggle-off)
+* [Icons8](https://icons8.com)
 
 ## Tutorials
 

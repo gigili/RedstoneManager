@@ -6,10 +6,7 @@ import dev.igorilic.redstonemanager.RedstoneManager;
 import dev.igorilic.redstonemanager.block.entity.RedstoneManagerBlockEntity;
 import dev.igorilic.redstonemanager.component.ModDataComponents;
 import dev.igorilic.redstonemanager.item.custom.RedstoneLinkerItem;
-import dev.igorilic.redstonemanager.network.MenuInteractPacketC2S;
-import dev.igorilic.redstonemanager.network.PacketCreateGroup;
-import dev.igorilic.redstonemanager.network.PacketToggleAllLevers;
-import dev.igorilic.redstonemanager.network.PacketToggleLever;
+import dev.igorilic.redstonemanager.network.*;
 import dev.igorilic.redstonemanager.util.IUpdatable;
 import dev.igorilic.redstonemanager.util.LinkerGroup;
 import dev.igorilic.redstonemanager.util.MousePositionManagerUtil;
@@ -20,12 +17,15 @@ import dev.igorilic.redstonemanager.util.entries.ItemEntry;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
+import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.client.renderer.GameRenderer;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Holder;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.sounds.SoundEvents;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.inventory.ClickType;
@@ -39,7 +39,6 @@ import org.lwjgl.glfw.GLFW;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.ThreadLocalRandom;
 
 public class ManagerScreen extends AbstractContainerScreen<ManagerMenu> implements IUpdatable {
     private static final ResourceLocation GUI_TEXTURE = ResourceLocation.fromNamespaceAndPath(RedstoneManager.MOD_ID, "textures/gui/gui_no_slots_large.png");
@@ -47,6 +46,8 @@ public class ManagerScreen extends AbstractContainerScreen<ManagerMenu> implemen
     private static final ResourceLocation GUI_SCROLL_TEXTURE = ResourceLocation.fromNamespaceAndPath(RedstoneManager.MOD_ID, "textures/gui/gui_scroll.png");
     private static final ResourceLocation GUI_ROW_TEXTURE = ResourceLocation.fromNamespaceAndPath(RedstoneManager.MOD_ID, "textures/gui/gui_row.png");
     private static final ResourceLocation GUI_TOGGLE_BUTTONS = ResourceLocation.fromNamespaceAndPath(RedstoneManager.MOD_ID, "textures/gui/gui_toggle_buttons.png");
+    private static final ResourceLocation GUI_BUTTONS = ResourceLocation.fromNamespaceAndPath(RedstoneManager.MOD_ID, "textures/gui/gui_buttons.png");
+    private static final ResourceLocation GUI_BTN_ADD = ResourceLocation.fromNamespaceAndPath(RedstoneManager.MOD_ID, "textures/gui/gui_btn_add.png");
 
     private static final int SCROLLBAR_WIDTH = 12;
     private static final int SCROLLBAR_X_OFFSET = 174; // adjust to fit GUI width
@@ -64,32 +65,40 @@ public class ManagerScreen extends AbstractContainerScreen<ManagerMenu> implemen
     private final List<DisplayEntry> flattenedEntries = new ArrayList<>();
     private Map<String, LinkerGroup> items;
 
+    private boolean isEditingGroup = false;
+    private String oldGroupName = "";
+
+    private Button btnSave;
+    private EditBox input;
+
     private void regenerateFlattenedEntries() {
         flattenedEntries.clear();
-        for (Map.Entry<String, LinkerGroup> entry : items.entrySet()) {
-            flattenedEntries.add(new HeaderEntry(entry.getKey()));
-            List<ItemStack> stacks = entry.getValue().getItems();
-            for (ItemStack stack : stacks) {
-                flattenedEntries.add(new ItemEntry(stack, entry.getKey()));
-            }
+        items.entrySet().stream()
+                .sorted(Map.Entry.comparingByKey())
+                .forEach(entry -> {
+                    flattenedEntries.add(new HeaderEntry(entry.getKey()));
+                    List<ItemStack> stacks = entry.getValue().getItems();
+                    for (ItemStack stack : stacks) {
+                        flattenedEntries.add(new ItemEntry(stack, entry.getKey()));
+                    }
 
-            int remainder = stacks.size() % 9;
-            boolean lastIsEmpty = !stacks.isEmpty() && stacks.getLast().isEmpty();
+                    int remainder = stacks.size() % 9;
+                    boolean lastIsEmpty = !stacks.isEmpty() && stacks.getLast().isEmpty();
 
-            int toAdd = 9;
+                    int toAdd = 9;
 
-            if (remainder != 0) {
-                toAdd = 9 - remainder;
-            }
+                    if (remainder != 0) {
+                        toAdd = 9 - remainder;
+                    }
 
-            if (lastIsEmpty) {
-                toAdd = 0;
-            }
+                    if (lastIsEmpty) {
+                        toAdd = 0;
+                    }
 
-            for (int i = 0; i < toAdd; i++) {
-                flattenedEntries.add(new ItemEntry(ItemStack.EMPTY, entry.getKey()));
-            }
-        }
+                    for (int i = 0; i < toAdd; i++) {
+                        flattenedEntries.add(new ItemEntry(ItemStack.EMPTY, entry.getKey()));
+                    }
+                });
     }
 
     public ManagerScreen(ManagerMenu menu, Inventory playerInventory, Component title) {
@@ -108,16 +117,37 @@ public class ManagerScreen extends AbstractContainerScreen<ManagerMenu> implemen
         super.init();
         this.clearWidgets();
 
-        Button btn = Button.builder(
-                        Component.literal("New Group"),
+        input = new EditBox(font, leftPos + 50, topPos - 24, 80, 20, Component.literal(""));
+
+        btnSave = Button.builder(
+                        Component.translatable("label.redstonemanager.manager.create"),
                         (b) -> {
+                            String newName = input.getValue();
+
+                            if (newName.isEmpty()) return;
+
+                            if (newName.length() > 12) {
+                                newName = newName.substring(0, 12);
+                            }
+
                             assert Minecraft.getInstance().player != null;
-                            Minecraft.getInstance().player.connection.send(new PacketCreateGroup(blockEntity.getBlockPos(), "Default #" + ThreadLocalRandom.current().nextInt(1000)));
+                            if (isEditingGroup && !newName.equals(oldGroupName)) {
+                                Minecraft.getInstance().player.connection.send(new PacketRenameGroup(blockEntity.getBlockPos(), oldGroupName, newName));
+                            } else {
+                                Minecraft.getInstance().player.connection.send(new PacketCreateGroup(blockEntity.getBlockPos(), newName));
+                            }
+
+                            isEditingGroup = false;
+                            b.setMessage(Component.translatable("label.redstonemanager.manager.create"));
+                            input.setValue("");
+                            oldGroupName = "";
                         }
                 )
-                .bounds(leftPos + imageWidth - 84, topPos + 1, 60, 15)
+                .bounds(leftPos, topPos - 24, 45, 20)
                 .build();
-        this.addRenderableWidget(btn);
+
+        this.addRenderableWidget(btnSave);
+        this.addRenderableWidget(input);
     }
 
     @Override
@@ -204,8 +234,29 @@ public class ManagerScreen extends AbstractContainerScreen<ManagerMenu> implemen
             if (renderedRows >= visibleRows) break;
 
             if (entry instanceof HeaderEntry(String groupName)) {
-                guiGraphics.drawString(font, groupName, startX + 3, rowY + 3, 0xFFFFFF);
-                renderToggleButtons(guiGraphics, startX + 3, rowY + 3, groupName);
+                guiGraphics.drawString(font, groupName, startX + 3, rowY + 3, 0xf1f1fc);
+                renderToggleButtons(guiGraphics, startX + 3, rowY + 3, groupName, mouseX, mouseY);
+
+
+                // Create a group button
+                // guiGraphics.blit(GUI_BTN_ADD, startX+imageWidth - 50, topPos-17, 0, 0, 17, 17, 17, 17);
+
+                // Edit button
+                guiGraphics.blit(GUI_BUTTONS, startX + 70, rowY + 2, 11, 0, 11, 11, 33, 11);
+
+                if (mouseX >= startX + 70 && mouseX < startX + 81 && mouseY >= rowY + 2 && mouseY < rowY + 11) {
+                    guiGraphics.renderTooltip(font, Component.translatable("tooltip.redstonemanager.manager.rename_group", groupName), startX + 70, rowY + 2);
+                }
+
+
+                // Delete button
+                guiGraphics.blit(GUI_BUTTONS, startX + 70 + 11 + 4, rowY + 2, 22, 0, 11, 11, 33, 11);
+
+                if (mouseX >= startX + 70 + 11 + 4 && mouseX < startX + 70 + 11 + 4 + 11 && mouseY >= rowY + 2 && mouseY < rowY + 11) {
+                    guiGraphics.renderTooltip(font, Component.translatable("tooltip.redstonemanager.manager.delete_group", groupName), startX + 70, rowY + 2);
+                }
+
+
                 rowY += 18;
                 renderedRows++;
                 flattenedIndex++;
@@ -270,7 +321,7 @@ public class ManagerScreen extends AbstractContainerScreen<ManagerMenu> implemen
         }
     }
 
-    private void renderToggleButtons(@NotNull GuiGraphics guiGraphics, int startX, int startY, String groupName) {
+    private void renderToggleButtons(@NotNull GuiGraphics guiGraphics, int startX, int startY, String groupName, int mouseX, int mouseY) {
         LinkerGroup linker = items.get(groupName);
         boolean allOn = linker.isPowered();
 
@@ -278,6 +329,18 @@ public class ManagerScreen extends AbstractContainerScreen<ManagerMenu> implemen
             guiGraphics.blit(GUI_TOGGLE_BUTTONS, startX + 136, startY - 1, 0, 0, 20, 11, 41, 11);
         } else {
             guiGraphics.blit(GUI_TOGGLE_BUTTONS, startX + 136, startY - 1, 20.5f, 0, 20, 11, 41, 11);
+        }
+
+        int toggleX = startX + 139;
+        int toggleY = startY + 2;
+        if (mouseX >= toggleX && mouseX < toggleX + 20 && mouseY >= toggleY && mouseY < toggleY + 11) {
+            Component toggleTooltip;
+            if (items.get(groupName).isPowered()) {
+                toggleTooltip = Component.translatable("tooltip.redstonemanager.manager.toggle_group_off", groupName);
+            } else {
+                toggleTooltip = Component.translatable("tooltip.redstonemanager.manager.toggle_group_on", groupName);
+            }
+            guiGraphics.renderTooltip(font, toggleTooltip, mouseX, mouseY);
         }
     }
 
@@ -360,6 +423,25 @@ public class ManagerScreen extends AbstractContainerScreen<ManagerMenu> implemen
                     Minecraft.getInstance().player.connection.send(new PacketToggleAllLevers(blockEntity.getBlockPos(), groupName));
                     return true;
                 }
+
+                // Edit button texture
+                if (mouseX >= startX + 70 && mouseX < startX + 81 && mouseY >= rowY + 2 && mouseY < rowY + 13) {
+                    isEditingGroup = true;
+                    input.setValue(groupName);
+                    oldGroupName = groupName;
+                    btnSave.setMessage(Component.translatable("label.redstonemanager.manager.save"));
+                    assert Minecraft.getInstance().player != null;
+                    Minecraft.getInstance().player.connection.send(new PacketPlaySound(blockEntity.getBlockPos(), Holder.direct(SoundEvents.UI_BUTTON_CLICK.value()), 0.3f, 1f));
+                    return true;
+                }
+
+                // Delete button texture
+                if (mouseX >= startX + 70 + 11 + 4 && mouseX < startX + 70 + 11 + 4 + 11 && mouseY >= rowY + 2 && mouseY < rowY + 13) {
+                    assert Minecraft.getInstance().player != null;
+                    Minecraft.getInstance().player.connection.send(new PacketDeleteGroup(blockEntity.getBlockPos(), groupName));
+                    return true;
+                }
+
 
                 rowY += 18;
                 flattenedIndex++;
@@ -474,11 +556,11 @@ public class ManagerScreen extends AbstractContainerScreen<ManagerMenu> implemen
             return super.keyPressed(keyCode, scanCode, modifiers);
         }
 
-        /*if (groupNameField.isFocused()) {
-            if (groupNameField.keyPressed(keyCode, scanCode, modifiers) || groupNameField.canConsumeInput()) {
+        if (input.isFocused()) {
+            if (input.keyPressed(keyCode, scanCode, modifiers) || input.canConsumeInput()) {
                 return true;
             }
-        }*/
+        }
 
         return super.keyPressed(keyCode, scanCode, modifiers);
     }
