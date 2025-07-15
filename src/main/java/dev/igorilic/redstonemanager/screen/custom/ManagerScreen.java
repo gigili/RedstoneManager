@@ -57,7 +57,6 @@ public class ManagerScreen extends AbstractContainerScreen<ManagerMenu> implemen
 
     private int scrollIndex = 0;
     public static int visibleRows = 7;
-    private final int itemsPerPage;
 
     private boolean isDraggingScrollbar = false;
     private int dragOffsetY = 0;
@@ -71,7 +70,7 @@ public class ManagerScreen extends AbstractContainerScreen<ManagerMenu> implemen
             flattenedEntries.add(new HeaderEntry(entry.getKey()));
             List<ItemStack> stacks = entry.getValue().getItems();
             for (ItemStack stack : stacks) {
-                flattenedEntries.add(new ItemEntry(stack));
+                flattenedEntries.add(new ItemEntry(stack, entry.getKey()));
             }
 
             int remainder = stacks.size() % 9;
@@ -88,7 +87,7 @@ public class ManagerScreen extends AbstractContainerScreen<ManagerMenu> implemen
             }
 
             for (int i = 0; i < toAdd; i++) {
-                flattenedEntries.add(new ItemEntry(ItemStack.EMPTY));
+                flattenedEntries.add(new ItemEntry(ItemStack.EMPTY, entry.getKey()));
             }
         }
     }
@@ -98,7 +97,6 @@ public class ManagerScreen extends AbstractContainerScreen<ManagerMenu> implemen
         MousePositionManagerUtil.setLastKnownPosition();
         this.blockEntity = menu.blockEntity;
         this.items = this.blockEntity.getItems();
-        this.itemsPerPage = visibleRows * COLUMNS;
         this.imageHeight = 243;
         this.imageWidth = 193;
         this.inventoryLabelY = this.imageHeight - 96;
@@ -218,7 +216,7 @@ public class ManagerScreen extends AbstractContainerScreen<ManagerMenu> implemen
 
                 while (itemCount < COLUMNS && flattenedIndex < flattenedEntries.size()) {
                     DisplayEntry subEntry = flattenedEntries.get(flattenedIndex);
-                    if (!(subEntry instanceof ItemEntry(ItemStack stack))) break;
+                    if (!(subEntry instanceof ItemEntry(ItemStack stack, String group))) break;
 
                     int col = itemCount;
                     int x = startX + col * 18;
@@ -331,7 +329,6 @@ public class ManagerScreen extends AbstractContainerScreen<ManagerMenu> implemen
         int flattenedIndex = 0;
         int virtualRow = 0;
         int renderedRows = 0;
-        String group = "Default";
 
         while (flattenedIndex < flattenedEntries.size()) {
             DisplayEntry entry = flattenedEntries.get(flattenedIndex);
@@ -368,19 +365,17 @@ public class ManagerScreen extends AbstractContainerScreen<ManagerMenu> implemen
                 flattenedIndex++;
                 virtualRow++;
                 renderedRows++;
-                group = groupName;
             } else if (entry instanceof ItemEntry) {
                 int itemCount = 0;
                 int rowStartIndex = flattenedIndex;
 
                 while (itemCount < COLUMNS && flattenedIndex < flattenedEntries.size()) {
                     DisplayEntry subEntry = flattenedEntries.get(flattenedIndex);
-                    if (!(subEntry instanceof ItemEntry(ItemStack stack))) break;
+                    if (!(subEntry instanceof ItemEntry(ItemStack stack, String group))) break;
 
                     int x = startX + itemCount * slotSize;
-                    int y = rowY;
 
-                    if (mouseX >= x && mouseX < x + 16 && mouseY >= y && mouseY < y + 16) {
+                    if (mouseX >= x && mouseX < x + 16 && mouseY >= rowY && mouseY < rowY + 16) {
                         LocalPlayer player = Minecraft.getInstance().player;
                         if (!stack.isEmpty()) {
                             if (button == 1) {
