@@ -26,5 +26,6 @@
   "label.redstonemanager.manager.save": "Save",
   "label.redstonemanager.manager.create": "Create",
   "tooltip.redstonemanager.manager.rename_group": "Rename group: %s",
-  "tooltip.redstonemanager.manager.delete_group": "Delete group: %s"
+  "tooltip.redstonemanager.manager.delete_group": "Delete group: %s",
+  "tooltip.redstonemanager.manager.loading": "Loading..."
 }

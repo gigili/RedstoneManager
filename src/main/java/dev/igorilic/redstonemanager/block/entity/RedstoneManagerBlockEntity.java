@@ -3,7 +3,9 @@ package dev.igorilic.redstonemanager.block.entity;
 import dev.igorilic.redstonemanager.component.ModDataComponents;
 import dev.igorilic.redstonemanager.item.custom.RedstoneLinkerItem;
 import dev.igorilic.redstonemanager.screen.custom.ManagerMenu;
+import dev.igorilic.redstonemanager.util.ChunkHandler;
 import dev.igorilic.redstonemanager.util.IUpdatable;
+import dev.igorilic.redstonemanager.util.LeverStateCache;
 import dev.igorilic.redstonemanager.util.LinkerGroup;
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;
@@ -15,6 +17,7 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.network.protocol.Packet;
 import net.minecraft.network.protocol.game.ClientGamePacketListener;
 import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.sounds.SoundEvent;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
@@ -113,26 +116,31 @@ public class RedstoneManagerBlockEntity extends BlockEntity implements MenuProvi
     }
 
     private void updateGroupPoweredState(String groupName) {
-        if (level == null) return;
-        boolean isOn = false;
-        for (ItemStack stack : this.items.get(groupName).getItems()) {
-            if (!(stack.getItem() instanceof RedstoneLinkerItem)) continue;
+        if (level == null || level.isClientSide) return;
+        if (!items.containsKey(groupName)) return;
 
-            BlockPos leverPos = stack.get(ModDataComponents.COORDINATES);
+        ItemStack item = items.get(groupName).getItems().stream().filter(stack -> !stack.isEmpty() && stack.has(ModDataComponents.COORDINATES)).findFirst().orElse(ItemStack.EMPTY);
+        ChunkHandler.tempLoadChunk(((ServerLevel) level), item, (loadedLevel) -> {
+            boolean isOn = false;
+            for (ItemStack stack : items.get(groupName).getItems()) {
+                if (!(stack.getItem() instanceof RedstoneLinkerItem)) continue;
 
-            if (leverPos == null) continue;
+                BlockPos leverPos = stack.get(ModDataComponents.COORDINATES);
 
+                if (leverPos == null) continue;
 
-            BlockState state = level.getBlockState(leverPos);
-            if (!state.is(Blocks.LEVER)) continue;
+                BlockState state = level.getBlockState(leverPos);
+                if (!state.is(Blocks.LEVER)) continue;
 
-            if (state.getValue(LeverBlock.POWERED)) {
-                isOn = true;
-                break;
+                if (state.getValue(LeverBlock.POWERED)) {
+                    isOn = true;
+                    break;
+                }
             }
-        }
 
-        this.items.get(groupName).setPowered(isOn);
+            this.items.get(groupName).setPowered(isOn);
+            setChanged();
+        });
     }
 
     public void removeItemFromGroup(String groupName, ItemStack item) {
@@ -213,10 +221,10 @@ public class RedstoneManagerBlockEntity extends BlockEntity implements MenuProvi
     }
 
     public void drops() {
-        /*SimpleContainer inv = new SimpleContainer(linkers.size());
+        SimpleContainer inv = new SimpleContainer(getAllItemSize());
         int index = 0;
-        for (Map.Entry<String, List<ItemStack>> entry : items.entrySet()) {
-            for (ItemStack stack : entry.getValue()) {
+        for (Map.Entry<String, LinkerGroup> entry : items.entrySet()) {
+            for (ItemStack stack : entry.getValue().getItems()) {
                 inv.setItem(index, stack);
                 index++;
             }
@@ -224,7 +232,7 @@ public class RedstoneManagerBlockEntity extends BlockEntity implements MenuProvi
 
         if (level != null) {
             Containers.dropContents(level, worldPosition, inv);
-        }*/
+        }
     }
 
     @Override
@@ -250,42 +258,52 @@ public class RedstoneManagerBlockEntity extends BlockEntity implements MenuProvi
     public void toggleLinkedLever(ItemStack stack) {
         if (level == null || level.isClientSide) return;
 
-        BlockPos leverPos = stack.get(ModDataComponents.COORDINATES);
-        if (leverPos == null) return;
+        ChunkHandler.tempLoadChunk(((ServerLevel) level), stack, (loadedLevel) -> {
+            if (loadedLevel == null || loadedLevel.isClientSide) return;
 
-        BlockState state = level.getBlockState(leverPos);
-        if (!state.is(Blocks.LEVER)) return;
+            BlockPos leverPos = stack.get(ModDataComponents.COORDINATES);
+            if (leverPos == null) return;
 
-        boolean isLeverPowered = state.getValue(LeverBlock.POWERED);
-        level.setBlock(leverPos, state.setValue(LeverBlock.POWERED, !isLeverPowered), Block.UPDATE_ALL);
-        level.playSound(null, leverPos, SoundEvents.LEVER_CLICK, SoundSource.BLOCKS, 0.3F, isLeverPowered ? 0.5F : 0.6F);
+            BlockState state = loadedLevel.getBlockState(leverPos);
+            if (!state.is(Blocks.LEVER)) return;
 
-        updateGroupPoweredState(findGroupByLever(stack));
+            boolean isLeverPowered = state.getValue(LeverBlock.POWERED);
+            loadedLevel.setBlock(leverPos, state.setValue(LeverBlock.POWERED, !isLeverPowered), Block.UPDATE_ALL);
+            playSound(SoundEvents.LEVER_CLICK, 0.3f, !isLeverPowered ? 0.5F : 0.6F);
+
+            LeverStateCache.update(leverPos, true, !isLeverPowered);
+            updateGroupPoweredState(findGroupByLever(stack));
+        });
     }
 
     public void toggleAllLinkedLever(String groupName) {
         if (level == null || level.isClientSide) return;
         if (!items.containsKey(groupName)) return;
+        if (items.get(groupName).getItems().isEmpty()) return;
 
         boolean allOn = items.get(groupName).isPowered();
 
-        for (ItemStack stack : items.get(groupName).getItems()) {
-            if (!(stack.getItem() instanceof RedstoneLinkerItem)) continue;
+        ItemStack item = items.get(groupName).getItems().stream().filter(stack -> !stack.isEmpty() && stack.has(ModDataComponents.COORDINATES)).findFirst().orElse(ItemStack.EMPTY);
 
-            BlockPos leverPos = stack.get(ModDataComponents.COORDINATES);
+        ChunkHandler.tempLoadChunk(((ServerLevel) level), item, (loadedLevel) -> {
+            for (ItemStack stack : items.get(groupName).getItems()) {
+                if (!(stack.getItem() instanceof RedstoneLinkerItem)) continue;
 
-            if (leverPos == null) continue;
+                BlockPos leverPos = stack.get(ModDataComponents.COORDINATES);
 
-            BlockState state = level.getBlockState(leverPos);
-            if (!state.is(Blocks.LEVER)) continue;
+                if (leverPos == null) continue;
 
-            level.setBlock(leverPos, state.setValue(LeverBlock.POWERED, !allOn), Block.UPDATE_ALL);
-        }
+                BlockState state = loadedLevel.getBlockState(leverPos);
+                if (!state.is(Blocks.LEVER)) continue;
 
-        items.get(groupName).setPowered(!allOn);
-        level.playSound(null, getBlockPos(), SoundEvents.LEVER_CLICK, SoundSource.BLOCKS, 0.3F, !allOn ? 0.5F : 0.6F);
+                LeverStateCache.update(leverPos, true, !allOn);
+                loadedLevel.setBlock(leverPos, state.setValue(LeverBlock.POWERED, !allOn), Block.UPDATE_ALL);
+            }
 
-        updateGroupPoweredState(groupName);
+            items.get(groupName).setPowered(!allOn);
+            playSound(SoundEvents.LEVER_CLICK, 0.3f, !allOn ? 0.5F : 0.6F);
+            updateGroupPoweredState(groupName);
+        });
     }
 
     public String findGroupByLever(ItemStack item) {

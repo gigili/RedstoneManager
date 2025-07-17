@@ -7,10 +7,7 @@ import dev.igorilic.redstonemanager.block.entity.RedstoneManagerBlockEntity;
 import dev.igorilic.redstonemanager.component.ModDataComponents;
 import dev.igorilic.redstonemanager.item.custom.RedstoneLinkerItem;
 import dev.igorilic.redstonemanager.network.*;
-import dev.igorilic.redstonemanager.util.IUpdatable;
-import dev.igorilic.redstonemanager.util.LinkerGroup;
-import dev.igorilic.redstonemanager.util.MousePositionManagerUtil;
-import dev.igorilic.redstonemanager.util.MouseUtil;
+import dev.igorilic.redstonemanager.util.*;
 import dev.igorilic.redstonemanager.util.entries.DisplayEntry;
 import dev.igorilic.redstonemanager.util.entries.HeaderEntry;
 import dev.igorilic.redstonemanager.util.entries.ItemEntry;
@@ -39,6 +36,7 @@ import org.lwjgl.glfw.GLFW;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 public class ManagerScreen extends AbstractContainerScreen<ManagerMenu> implements IUpdatable {
     private static final ResourceLocation GUI_TEXTURE = ResourceLocation.fromNamespaceAndPath(RedstoneManager.MOD_ID, "textures/gui/gui_no_slots_large.png");
@@ -173,6 +171,7 @@ public class ManagerScreen extends AbstractContainerScreen<ManagerMenu> implemen
             guiGraphics.blit(GUI_TEXTURE, baseX, baseY, 0, 0, imageWidth, imageHeight, 256, 256);
             drawScrollbar(guiGraphics);
         } else {
+            scrollIndex = 0;
             guiGraphics.blit(GUI_NO_SCROLL_TEXTURE, baseX, baseY, 0, 0, imageWidth, imageHeight, 256, 256);
         }
     }
@@ -283,22 +282,25 @@ public class ManagerScreen extends AbstractContainerScreen<ManagerMenu> implemen
 
                         if (mouseX >= x && mouseX < x + 16 && mouseY >= rowY && mouseY < rowY + 16) {
                             BlockPos leverPos = stack.get(ModDataComponents.COORDINATES);
-                            Component extraLabel = null;
-                            if (leverPos == null) {
-                                extraLabel = Component.translatable("errors.redstonemanager.manager.not_linked");
-                            } else if (blockEntity.getLevel() != null) {
-                                BlockState leverState = blockEntity.getLevel().getBlockState(leverPos);
-                                if (!leverState.is(Blocks.LEVER)) {
-                                    extraLabel = Component.translatable("errors.redstonemanager.manager.invalid_link");
-                                } else {
-                                    boolean isLeverOn = isLeverOn(stack);
-                                    extraLabel = isLeverOn ? Component.translatable("tooltip.redstonemanager.manager.turn_off") : Component.translatable("tooltip.redstonemanager.manager.turn_on");
-                                }
+                            if (leverPos != null) {
+                                LeverStateCache.requestIfNeeded(leverPos);
+
+                                LeverStateCache.get(leverPos).ifPresentOrElse(cached -> {
+                                    Component extraLabel;
+                                    if (!cached.found()) {
+                                        extraLabel = Component.translatable("errors.redstonemanager.manager.invalid_link");
+                                    } else {
+                                        extraLabel = cached.powered()
+                                                ? Component.translatable("tooltip.redstonemanager.manager.turn_off")
+                                                : Component.translatable("tooltip.redstonemanager.manager.turn_on");
+                                    }
+                                    guiGraphics.renderTooltip(font, extraLabel, mouseX, mouseY - 12);
+                                }, () -> {
+                                    Component extraLabel = Component.translatable("tooltip.redstonemanager.manager.loading");
+                                    guiGraphics.renderTooltip(font, extraLabel, mouseX, mouseY - 12);
+                                });
                             }
 
-                            if (extraLabel != null) {
-                                guiGraphics.renderTooltip(font, extraLabel, mouseX, mouseY - 12);
-                            }
                             guiGraphics.renderTooltip(font, stack, mouseX, mouseY);
                         }
                     }
@@ -345,11 +347,22 @@ public class ManagerScreen extends AbstractContainerScreen<ManagerMenu> implemen
     }
 
     private void renderLinkerItemBackground(ItemStack linkerItem, GuiGraphics guiGraphics, int slotX, int slotY) {
-        boolean isLeverOn = isLeverOn(linkerItem);
-        int color = isLeverOn ? 0x7700FF00 : 0x77FF0000; // Green/Red with transparency
+        BlockPos leverPos = linkerItem.get(ModDataComponents.COORDINATES);
         int slotSize = 16;
+
+        int color;
+        if (leverPos != null) {
+            LeverStateCache.requestIfNeeded(leverPos); // Triggers request if needed
+
+            Optional<LeverStateCache.CachedLever> cached = LeverStateCache.get(leverPos);
+            color = cached.map(cachedLever -> cachedLever.powered() ? 0x7700FF00 : 0x77FF0000).orElse(0x77444444);
+        } else {
+            color = 0x77000000; // black = not linked
+        }
+
         guiGraphics.fill(slotX, slotY, slotX + slotSize, slotY + slotSize, color);
     }
+
 
     private int getScrollbarHeight() {
         return 18 * 3; // Was 18 * visibleRows, but we have scroll fixed to 3 rows height
