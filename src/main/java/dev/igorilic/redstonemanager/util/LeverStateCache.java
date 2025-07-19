@@ -17,7 +17,7 @@ public class LeverStateCache {
 
     public static Optional<CachedLever> get(BlockPos pos) {
         CachedLever cached = leverStates.get(pos);
-        if (cached == null || (System.currentTimeMillis() - cached.timestamp) > 5000) {
+        if (cached == null || (System.currentTimeMillis() - cached.timestamp) > 60_000) {
             return Optional.empty(); // stale
         }
         return Optional.of(cached);

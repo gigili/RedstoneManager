@@ -103,7 +103,7 @@ public class ManagerScreen extends AbstractContainerScreen<ManagerMenu> implemen
         this.items = this.blockEntity.getItems();
         this.imageHeight = 243;
         this.imageWidth = 193;
-        this.inventoryLabelY = this.imageHeight - 96;
+        this.inventoryLabelY = this.imageHeight - 95;
         regenerateFlattenedEntries();
     }
 
@@ -179,7 +179,7 @@ public class ManagerScreen extends AbstractContainerScreen<ManagerMenu> implemen
         this.renderTooltip(guiGraphics, mouseX, mouseY);
 
         //guiGraphics.enableScissor(leftPos + 7, topPos + 17, leftPos + 7 + 162, topPos + 17 + (18 * visibleRows));
-        renderItems(guiGraphics, mouseX, mouseY);
+        renderItems(guiGraphics, mouseX, mouseY, partialTick);
         //guiGraphics.disableScissor();
         renderTooltip(guiGraphics, mouseX, mouseY);
     }
@@ -196,7 +196,7 @@ public class ManagerScreen extends AbstractContainerScreen<ManagerMenu> implemen
         guiGraphics.blit(GUI_SCROLL_TEXTURE, scrollbarX, handleY, 168, 0, 12, 15, 12, 15);
     }
 
-    private void renderItems(@NotNull GuiGraphics guiGraphics, int mouseX, int mouseY) {
+    private void renderItems(@NotNull GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
         int startX = leftPos + 7;
         int rowY = topPos + 19;
 
@@ -231,7 +231,7 @@ public class ManagerScreen extends AbstractContainerScreen<ManagerMenu> implemen
 
             if (entry instanceof HeaderEntry(String groupName)) {
                 guiGraphics.drawString(font, groupName, startX + 3, rowY + 5, 0x3f3f3f, false);
-                renderToggleButtons(guiGraphics, startX + 3, rowY + 4, groupName, mouseX, mouseY);
+                renderToggleButtons(guiGraphics, startX + 3, rowY + 4, groupName, mouseX, mouseY, partialTick);
                 renderGroupActionButtons(guiGraphics, startX + 3, rowY + 3, groupName, mouseX, mouseY);
 
                 rowY += 18;
@@ -301,7 +301,7 @@ public class ManagerScreen extends AbstractContainerScreen<ManagerMenu> implemen
         }
     }
 
-    private void renderToggleButtons(@NotNull GuiGraphics guiGraphics, int startX, int startY, String groupName, int mouseX, int mouseY) {
+    private void renderToggleButtons(@NotNull GuiGraphics guiGraphics, int startX, int startY, String groupName, int mouseX, int mouseY, float partialTick) {
         LinkerGroup linker = items.get(groupName);
         boolean allOn = linker.isPowered();
 
