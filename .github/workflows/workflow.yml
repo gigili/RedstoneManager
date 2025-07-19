@@ -41,4 +41,4 @@ jobs:
           MAVEN_USERNAME: ${{ secrets.MAVEN_NAME }}
           MAVEN_TOKEN: ${{ secrets.MAVEN_SECRET }}
         with:
-          arguments: publish --stacktrace
+          arguments: publish --stacktrace --rerun-tasks
