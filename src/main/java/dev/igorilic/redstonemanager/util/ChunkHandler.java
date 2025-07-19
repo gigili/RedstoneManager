@@ -20,6 +20,10 @@ public class ChunkHandler {
         if (cords == null) return;
 
         ChunkPos chunkPos = new ChunkPos(cords);
+        if (level.isLoaded(cords)) {
+            handler(level, cords, callback, chunkPos);
+            return;
+        }
 
         level.getChunkSource().addRegionTicket(
                 TicketType.FORCED,
@@ -37,6 +41,11 @@ public class ChunkHandler {
 
     public static void tempLoadChunk(ServerLevel level, BlockPos pos, Consumer<ServerLevel> callback) {
         ChunkPos chunkPos = new ChunkPos(pos);
+
+        if (level.isLoaded(pos)) {
+            handler(level, pos, callback, chunkPos);
+            return;
+        }
 
         level.getChunkSource().addRegionTicket(
                 TicketType.FORCED,

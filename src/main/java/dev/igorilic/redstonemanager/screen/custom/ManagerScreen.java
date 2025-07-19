@@ -20,16 +20,13 @@ import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.client.renderer.GameRenderer;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Holder;
+import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.player.Inventory;
-import net.minecraft.world.inventory.ClickType;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.level.block.Blocks;
-import net.minecraft.world.level.block.LeverBlock;
-import net.minecraft.world.level.block.state.BlockState;
 import org.jetbrains.annotations.NotNull;
 import org.lwjgl.glfw.GLFW;
 
@@ -233,28 +230,9 @@ public class ManagerScreen extends AbstractContainerScreen<ManagerMenu> implemen
             if (renderedRows >= visibleRows) break;
 
             if (entry instanceof HeaderEntry(String groupName)) {
-                guiGraphics.drawString(font, groupName, startX + 3, rowY + 3, 0xf1f1fc);
-                renderToggleButtons(guiGraphics, startX + 3, rowY + 3, groupName, mouseX, mouseY);
-
-
-                // Create a group button
-                // guiGraphics.blit(GUI_BTN_ADD, startX+imageWidth - 50, topPos-17, 0, 0, 17, 17, 17, 17);
-
-                // Edit button
-                guiGraphics.blit(GUI_BUTTONS, startX + 70, rowY + 2, 11, 0, 11, 11, 33, 11);
-
-                if (mouseX >= startX + 70 && mouseX < startX + 81 && mouseY >= rowY + 2 && mouseY < rowY + 11) {
-                    guiGraphics.renderTooltip(font, Component.translatable("tooltip.redstonemanager.manager.rename_group", groupName), startX + 70, rowY + 2);
-                }
-
-
-                // Delete button
-                guiGraphics.blit(GUI_BUTTONS, startX + 70 + 11 + 4, rowY + 2, 22, 0, 11, 11, 33, 11);
-
-                if (mouseX >= startX + 70 + 11 + 4 && mouseX < startX + 70 + 11 + 4 + 11 && mouseY >= rowY + 2 && mouseY < rowY + 11) {
-                    guiGraphics.renderTooltip(font, Component.translatable("tooltip.redstonemanager.manager.delete_group", groupName), startX + 70, rowY + 2);
-                }
-
+                guiGraphics.drawString(font, groupName, startX + 3, rowY + 5, 0x3f3f3f, false);
+                renderToggleButtons(guiGraphics, startX + 3, rowY + 4, groupName, mouseX, mouseY);
+                renderGroupActionButtons(guiGraphics, startX + 3, rowY + 3, groupName, mouseX, mouseY);
 
                 rowY += 18;
                 renderedRows++;
@@ -346,6 +324,22 @@ public class ManagerScreen extends AbstractContainerScreen<ManagerMenu> implemen
         }
     }
 
+    private void renderGroupActionButtons(@NotNull GuiGraphics guiGraphics, int startX, int rowY, String groupName, int mouseX, int mouseY) {
+        // Edit button
+        guiGraphics.blit(GUI_BUTTONS, startX + 70, rowY, 11, 0, 11, 11, 33, 11);
+
+        if (mouseX >= startX + 70 && mouseX < startX + 81 && mouseY >= rowY && mouseY < rowY + 11) {
+            guiGraphics.renderTooltip(font, Component.translatable("tooltip.redstonemanager.manager.rename_group", groupName), startX + 70, rowY + 2);
+        }
+
+        // Delete button
+        guiGraphics.blit(GUI_BUTTONS, startX + 70 + 11 + 4, rowY, 22, 0, 11, 11, 33, 11);
+
+        if (mouseX >= startX + 70 + 11 + 4 && mouseX < startX + 70 + 11 + 4 + 11 && mouseY >= rowY && mouseY < rowY + 11) {
+            guiGraphics.renderTooltip(font, Component.translatable("tooltip.redstonemanager.manager.delete_group", groupName), startX + 70, rowY + 2);
+        }
+    }
+
     private void renderLinkerItemBackground(ItemStack linkerItem, GuiGraphics guiGraphics, int slotX, int slotY) {
         BlockPos leverPos = linkerItem.get(ModDataComponents.COORDINATES);
         int slotSize = 16;
@@ -363,17 +357,8 @@ public class ManagerScreen extends AbstractContainerScreen<ManagerMenu> implemen
         guiGraphics.fill(slotX, slotY, slotX + slotSize, slotY + slotSize, color);
     }
 
-
     private int getScrollbarHeight() {
         return 18 * 3; // Was 18 * visibleRows, but we have scroll fixed to 3 rows height
-    }
-
-    private boolean isLeverOn(ItemStack stack) {
-        if (minecraft == null || minecraft.level == null) return false;
-        BlockPos leverPos = stack.get(ModDataComponents.COORDINATES);
-        if (leverPos == null) return false;
-        BlockState state = minecraft.level.getBlockState(leverPos);
-        return state.is(Blocks.LEVER) && state.getValue(LeverBlock.POWERED);
     }
 
     private int getTotalRows() {
@@ -405,6 +390,7 @@ public class ManagerScreen extends AbstractContainerScreen<ManagerMenu> implemen
         int flattenedIndex = 0;
         int virtualRow = 0;
         int renderedRows = 0;
+        int currentSlotIndex = 0;
 
         while (flattenedIndex < flattenedEntries.size()) {
             DisplayEntry entry = flattenedEntries.get(flattenedIndex);
@@ -473,32 +459,40 @@ public class ManagerScreen extends AbstractContainerScreen<ManagerMenu> implemen
                     if (mouseX >= x && mouseX < x + 16 && mouseY >= rowY && mouseY < rowY + 16) {
                         LocalPlayer player = Minecraft.getInstance().player;
                         if (!stack.isEmpty()) {
-                            if (button == 1) {
+                            if (button == 1) { // RightClick
                                 assert player != null;
                                 player.connection.send(new PacketToggleLever(blockEntity.getBlockPos(), stack));
-                            } else if (button == 0) {
+                            } else if (button == 0) { // LeftClick
                                 assert player != null;
-                                int clickType = carried.isEmpty() ? ClickType.PICKUP.ordinal() : ClickType.SWAP.ordinal();
+                                // PICKUP = Take item out of a manager / SWAP = Swap existing item with one in hand
+                                int clickType = carried.isEmpty() ? ClickAction.PICKUP.ordinal() : ClickAction.SWAP.ordinal();
                                 if (isShiftDown()) {
-                                    clickType = ClickType.QUICK_MOVE.ordinal();
+                                    // shift + click out of a manager
+                                    clickType = ClickAction.QUICK_MOVE.ordinal();
                                 }
-                                player.connection.send(new MenuInteractPacketC2S(stack, clickType, 0, blockEntity.getBlockPos(), group));
+                                player.connection.send(new PacketMoveItemBetweenInventories(stack, clickType, 0, blockEntity.getBlockPos(), group));
                             }
                         } else if (!carried.isEmpty()) {
                             assert player != null;
-                            player.connection.send(new MenuInteractPacketC2S(ItemStack.EMPTY, ClickType.PICKUP_ALL.ordinal(), 0, blockEntity.getBlockPos(), group));
+                            // Put item into a manager
+                            CompoundTag extraData = new CompoundTag();
+                            extraData.putInt("index", currentSlotIndex);
+                            extraData.putInt("row", virtualRow);
+                            player.connection.send(new PacketMoveItemBetweenInventories(ItemStack.EMPTY, extraData, ClickAction.PUT_INTO_MANAGER.ordinal(), 0, blockEntity.getBlockPos(), group));
                         }
                         return true;
                     }
 
                     itemCount++;
                     flattenedIndex++;
+                    currentSlotIndex++;
                 }
 
                 if (flattenedIndex > rowStartIndex) {
                     rowY += 18;
                     renderedRows++;
                     virtualRow++;
+                    currentSlotIndex = 0;
                 } else {
                     flattenedIndex++; // Prevent infinite loop
                 }

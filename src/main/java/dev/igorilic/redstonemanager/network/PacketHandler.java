@@ -51,9 +51,9 @@ public class PacketHandler {
         );
 
         registrar.playToServer(
-                MenuInteractPacketC2S.TYPE,
-                MenuInteractPacketC2S.STREAM_CODEC,
-                MenuInteractPacketC2S.HANDLER
+                PacketMoveItemBetweenInventories.TYPE,
+                PacketMoveItemBetweenInventories.STREAM_CODEC,
+                PacketMoveItemBetweenInventories.HANDLER
         );
 
         registrar.playToServer(

@@ -45,23 +45,25 @@ public class RedstoneManagerBlockEntity extends BlockEntity implements MenuProvi
         super(ModBlockEntities.MANAGER_BE.get(), pos, blockState);
     }
 
-    /*public void swapLinker(String groupName, int index, ItemStack newLinker) {
-        if (index < 0 || index >= this.linkers.size()) {
-            return;
-        }
+    public void swapLinker(String groupName, ItemStack existingItem, ItemStack inHand) {
+        if (!items.containsKey(groupName)) return; // Group doesn't exist
+        if (existingItem.isEmpty() || inHand.isEmpty()) return; // None of the items can't be empty for swap to work
+        if (!(existingItem.getItem() instanceof RedstoneLinkerItem) || !(inHand.getItem() instanceof RedstoneLinkerItem))
+            return; // Must be valid item
 
-        // Validate the new item is a linker
-        if (!(newLinker.getItem() instanceof RedstoneLinkerItem)) {
-            return;
-        }
+        LinkerGroup group = items.get(groupName);
+        int existingItemIndex = group.findLinkerIndex(existingItem);
 
-        this.linkers.set(index, newLinker.copy());
+        if (existingItemIndex == -1) return; // Can't locate an existing item in group
+
+        items.get(groupName).getItems().set(existingItemIndex, inHand.copy());
+
         this.setChanged();
 
         if (level != null) {
             level.sendBlockUpdated(getBlockPos(), getBlockState(), getBlockState(), Block.UPDATE_ALL);
         }
-    }*/
+    }
 
     public Map<String, LinkerGroup> getItems() {
         return Collections.unmodifiableMap(items);

@@ -4,13 +4,13 @@ import dev.igorilic.redstonemanager.block.ModBlocks;
 import dev.igorilic.redstonemanager.block.entity.RedstoneManagerBlockEntity;
 import dev.igorilic.redstonemanager.item.custom.RedstoneLinkerItem;
 import dev.igorilic.redstonemanager.screen.ModMenuTypes;
+import dev.igorilic.redstonemanager.util.ClickAction;
 import dev.igorilic.redstonemanager.util.Interact;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
-import net.minecraft.world.inventory.ClickType;
 import net.minecraft.world.inventory.ContainerLevelAccess;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
@@ -93,7 +93,7 @@ public class ManagerMenu extends AbstractContainerMenu implements Interact {
     }
 
     @Override
-    public void clicked(ItemStack itemStack, CompoundTag extraData, ClickType clickType, int button, String groupName) {
+    public void clicked(ItemStack itemStack, CompoundTag extraData, ClickAction clickType, int button, String groupName) {
         switch (clickType) {
             case PICKUP -> { // Take item out of a manager
                 if (getCarried().isEmpty() && itemStack != null) {
@@ -104,7 +104,7 @@ public class ManagerMenu extends AbstractContainerMenu implements Interact {
                     }
                 }
             }
-            case PICKUP_ALL -> { // Put item into a manager
+            case PUT_INTO_MANAGER -> { // Put item into a manager
                 if (!getCarried().isEmpty() && itemStack.isEmpty()) {
                     final var result = getCarried().copy();
                     if (!result.isEmpty()) {
@@ -116,11 +116,10 @@ public class ManagerMenu extends AbstractContainerMenu implements Interact {
             case SWAP -> {
                 if (!getCarried().isEmpty() && itemStack != null) {
                     final var result = getCarried().copy();
-                    //TODO: Reimplement this
-                    /*if (!result.isEmpty()) {
+                    if (!result.isEmpty()) {
+                        blockEntity.swapLinker(groupName, itemStack, result);
                         setCarried(itemStack);
-                        blockEntity.swapLinker(blockEntity.findLinkerIndex(blockEntity.getLinkers(), itemStack), result);
-                    }*/
+                    }
                 }
             }
             case QUICK_MOVE -> { // shift + click out of a manager
