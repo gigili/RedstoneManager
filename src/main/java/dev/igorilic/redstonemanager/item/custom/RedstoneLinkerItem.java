@@ -1,6 +1,7 @@
 package dev.igorilic.redstonemanager.item.custom;
 
 import dev.igorilic.redstonemanager.component.ModDataComponents;
+import dev.igorilic.redstonemanager.util.LinkerGroup;
 import dev.igorilic.redstonemanager.util.RMLogger;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
@@ -15,17 +16,12 @@ import net.minecraft.world.item.TooltipFlag;
 import net.minecraft.world.item.context.UseOnContext;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
-import net.minecraft.world.level.block.Blocks;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.List;
 import java.util.UUID;
 
 public class RedstoneLinkerItem extends Item {
-    private static final List<Block> ALLOWED_ITEMS = List.of(
-            Blocks.LEVER
-    );
-
     public RedstoneLinkerItem(Properties properties) {
         super(properties);
     }
@@ -55,7 +51,7 @@ public class RedstoneLinkerItem extends Item {
         if (!level.isClientSide) {
             if (context.getPlayer() != null) {
                 if (context.getPlayer().isCrouching()) {
-                    if (ALLOWED_ITEMS.contains(clicked)) {
+                    if (LinkerGroup.canLink(level.getBlockState(context.getClickedPos()))) {
                         RMLogger.info("Redstone linker linked to: %s", context.getClickedPos());
                         context.getItemInHand().set(ModDataComponents.COORDINATES, context.getClickedPos());
                         level.playSound(null, context.getClickedPos(), SoundEvents.STONE_BUTTON_CLICK_ON, SoundSource.BLOCKS, 1.0F, 1.0F);

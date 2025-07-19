@@ -29,7 +29,6 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.Block;
-import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.LeverBlock;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
@@ -132,7 +131,7 @@ public class RedstoneManagerBlockEntity extends BlockEntity implements MenuProvi
                 if (leverPos == null) continue;
 
                 BlockState state = level.getBlockState(leverPos);
-                if (!state.is(Blocks.LEVER)) continue;
+                if (!LinkerGroup.canLink(state)) continue;
 
                 if (state.getValue(LeverBlock.POWERED)) {
                     isOn = true;
@@ -267,7 +266,7 @@ public class RedstoneManagerBlockEntity extends BlockEntity implements MenuProvi
             if (leverPos == null) return;
 
             BlockState state = loadedLevel.getBlockState(leverPos);
-            if (!state.is(Blocks.LEVER)) return;
+            if (!LinkerGroup.canLink(state)) return;
 
             boolean isLeverPowered = state.getValue(LeverBlock.POWERED);
             loadedLevel.setBlock(leverPos, state.setValue(LeverBlock.POWERED, !isLeverPowered), Block.UPDATE_ALL);
@@ -296,7 +295,7 @@ public class RedstoneManagerBlockEntity extends BlockEntity implements MenuProvi
                 if (leverPos == null) continue;
 
                 BlockState state = loadedLevel.getBlockState(leverPos);
-                if (!state.is(Blocks.LEVER)) continue;
+                if (!LinkerGroup.canLink(state)) continue;
 
                 LeverStateCache.update(leverPos, true, !allOn);
                 loadedLevel.setBlock(leverPos, state.setValue(LeverBlock.POWERED, !allOn), Block.UPDATE_ALL);

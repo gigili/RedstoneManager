@@ -2,6 +2,7 @@ package dev.igorilic.redstonemanager.network;
 
 import dev.igorilic.redstonemanager.RedstoneManager;
 import dev.igorilic.redstonemanager.util.ChunkHandler;
+import dev.igorilic.redstonemanager.util.LinkerGroup;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
@@ -9,7 +10,6 @@ import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.LeverBlock;
 import net.minecraft.world.level.block.state.BlockState;
 import net.neoforged.neoforge.network.handling.IPayloadHandler;
@@ -35,7 +35,7 @@ public record PacketLeverStateRequest(BlockPos pos) implements CustomPacketPaylo
             ServerLevel level = player.serverLevel();
             ChunkHandler.tempLoadChunk(level, payload.pos, serverLevel -> {
                 BlockState state = serverLevel.getBlockState(payload.pos);
-                boolean found = state.is(Blocks.LEVER);
+                boolean found = LinkerGroup.canLink(state);
                 boolean powered = found && state.getValue(LeverBlock.POWERED);
                 PacketHandler.sendToClient(player, new PacketLeverStateResponse(payload.pos, found, powered));
             });

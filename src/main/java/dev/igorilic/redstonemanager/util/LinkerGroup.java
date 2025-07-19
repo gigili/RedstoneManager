@@ -1,7 +1,11 @@
 package dev.igorilic.redstonemanager.util;
 
 import dev.igorilic.redstonemanager.component.ModDataComponents;
+import net.minecraft.tags.TagKey;
+import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.state.BlockState;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -91,5 +95,31 @@ public class LinkerGroup {
             }
         }
         return -1;
+    }
+
+    public static boolean canLink(ItemStack stack) {
+        boolean hasMatch = false;
+
+        for (TagKey<Item> tag : stack.getTags().toList()) {
+            if (tag.equals(ModTags.Items.LINKABLE_ITEMS)) {
+                hasMatch = true;
+                break;
+            }
+        }
+
+        return hasMatch;
+    }
+
+    public static boolean canLink(BlockState state) {
+        boolean hasMatch = false;
+
+        for (TagKey<Block> tag : state.getTags().toList()) {
+            if (tag.equals(ModTags.Blocks.LINKABLE_ITEMS)) {
+                hasMatch = true;
+                break;
+            }
+        }
+
+        return hasMatch;
     }
 }

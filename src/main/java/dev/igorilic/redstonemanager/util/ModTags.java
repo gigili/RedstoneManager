@@ -10,6 +10,8 @@ import net.minecraft.world.level.block.Block;
 
 public class ModTags {
     public static class Blocks {
+        public static final TagKey<Block> LINKABLE_ITEMS = createTag("linkable_items");
+        
         private static TagKey<Block> createTag(String name) {
             return BlockTags.create(ResourceLocation.fromNamespaceAndPath(RedstoneManager.MOD_ID, name));
         }
