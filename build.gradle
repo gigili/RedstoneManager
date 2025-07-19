@@ -5,9 +5,13 @@ plugins {
     id 'net.neoforged.moddev' version '2.0.99'
 }
 
-ext.ENV = System.getenv()
+
 version = mod_version
 group = mod_group_id
+
+def mavenUrl = System.getenv("MAVEN_URL")
+def mavenUser = System.getenv("MAVEN_USERNAME")
+def mavenPass = System.getenv("MAVEN_TOKEN")
 
 println("Building version: ${version}")
 
@@ -179,21 +183,27 @@ neoForge.ideSyncTask generateModMetadata
 publishing {
     publications {
         mavenNeoForge(MavenPublication) {
-            artifactId = archives_base_name
+            artifactId = mod_id
             from components.java
         }
     }
 
     repositories {
-        if (ENV.MAVEN_URL && ENV.MAVEN_NAME && ENV.MAVEN_SECRET) {
+        if (mavenUrl && mavenUser && mavenPass) {
             maven {
-                url = ENV.MAVEN_URL
+                url = uri(mavenUrl)
                 credentials {
-                    username = ENV.MAVEN_NAME
-                    password = ENV.MAVEN_SECRET
+                    username = mavenUser
+                    password = mavenPass
                 }
             }
         }
+    }
+}
+
+tasks.named("publish") {
+    doFirst {
+        println ">>> Running publish task!"
     }
 }
 
