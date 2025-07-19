@@ -5,8 +5,11 @@ plugins {
     id 'net.neoforged.moddev' version '2.0.99'
 }
 
+ext.ENV = System.getenv()
 version = mod_version
 group = mod_group_id
+
+println("Building version: ${version}")
 
 repositories {
     mavenLocal()
@@ -175,13 +178,21 @@ neoForge.ideSyncTask generateModMetadata
 // Example configuration to allow publishing using the maven-publish plugin
 publishing {
     publications {
-        register('mavenJava', MavenPublication) {
+        mavenNeoForge(MavenPublication) {
+            artifactId = archives_base_name
             from components.java
         }
     }
+
     repositories {
-        maven {
-            url "file://${project.projectDir}/repo"
+        if (ENV.MAVEN_URL && ENV.MAVEN_NAME && ENV.MAVEN_SECRET) {
+            maven {
+                url = ENV.MAVEN_URL
+                credentials {
+                    username = ENV.MAVEN_NAME
+                    password = ENV.MAVEN_SECRET
+                }
+            }
         }
     }
 }

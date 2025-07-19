@@ -34,7 +34,7 @@ jobs:
         with:
           arguments: build -x test --stacktrace
 
-      - name: Publish to latvian.dev Maven
+      - name: Publish to self-hosted Maven
         uses: gradle/gradle-build-action@v2
         env:
           MAVEN_URL: ${{ secrets.MAVEN_URL }}
