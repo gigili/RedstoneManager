@@ -35,4 +35,4 @@ jobs:
           MAVEN_URL: ${{ secrets.MAVEN_URL }}
           MAVEN_USERNAME: ${{ secrets.MAVEN_NAME }}
           MAVEN_TOKEN: ${{ secrets.MAVEN_SECRET }}
-        run: publish --stacktrace --rerun-tasks
+        run: ./gradlew publish --stacktrace --rerun-tasks
