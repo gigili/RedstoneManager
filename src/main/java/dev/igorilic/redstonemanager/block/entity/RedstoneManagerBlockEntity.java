@@ -117,6 +117,16 @@ public class RedstoneManagerBlockEntity extends BlockEntity implements MenuProvi
     }
 
     private void updateGroupPoweredState(String groupName) {
+        updateGroupPoweredState(groupName, true);
+    }
+
+    public void updateGroupPoweredState() {
+        for (LinkerGroup group : items.values()) {
+            updateGroupPoweredState(group.getGroupName(), true);
+        }
+    }
+
+    private void updateGroupPoweredState(String groupName, Boolean changed) {
         if (level == null || level.isClientSide) return;
         if (!items.containsKey(groupName)) return;
 
@@ -130,17 +140,25 @@ public class RedstoneManagerBlockEntity extends BlockEntity implements MenuProvi
 
                 if (leverPos == null) continue;
 
-                BlockState state = level.getBlockState(leverPos);
+                BlockState state = loadedLevel.getBlockState(leverPos);
                 if (!LinkerGroup.canLink(state)) continue;
 
                 if (state.getValue(LeverBlock.POWERED)) {
                     isOn = true;
-                    break;
+                }
+
+                List<String> otherGroups = findAllGroupsForLever(stack);
+                for (String otherGroup : otherGroups) {
+                    if (!otherGroup.equals(groupName) && changed) {
+                        updateGroupPoweredState(otherGroup, false);
+                    }
                 }
             }
 
             this.items.get(groupName).setPowered(isOn);
-            setChanged();
+            if (changed) {
+                setChanged();
+            }
         });
     }
 
@@ -256,7 +274,7 @@ public class RedstoneManagerBlockEntity extends BlockEntity implements MenuProvi
         return new ManagerMenu(i, inventory, this);
     }
 
-    public void toggleLinkedLever(ItemStack stack) {
+    public void toggleLinkedLever(ItemStack stack, String group) {
         if (level == null || level.isClientSide) return;
 
         ChunkHandler.tempLoadChunk(((ServerLevel) level), stack, (loadedLevel) -> {
@@ -273,7 +291,7 @@ public class RedstoneManagerBlockEntity extends BlockEntity implements MenuProvi
             playSound(SoundEvents.LEVER_CLICK, 0.3f, !isLeverPowered ? 0.5F : 0.6F);
 
             LeverStateCache.update(leverPos, true, !isLeverPowered);
-            updateGroupPoweredState(findGroupByLever(stack));
+            updateGroupPoweredState(group);
         });
     }
 
@@ -307,13 +325,15 @@ public class RedstoneManagerBlockEntity extends BlockEntity implements MenuProvi
         });
     }
 
-    public String findGroupByLever(ItemStack item) {
+    public List<String> findAllGroupsForLever(ItemStack item) {
+        List<String> groups = new ArrayList<>();
         for (LinkerGroup group : items.values()) {
             int index = group.findLinkerIndex(item);
             if (index == -1) continue;
-            return group.getGroupName();
+            groups.add(group.getGroupName());
         }
-        return null;
+
+        return groups;
     }
 
     public void playSound(SoundEvent soundEvent, float volume, float pitch) {

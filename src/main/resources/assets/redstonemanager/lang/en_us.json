@@ -1,12 +1,23 @@
 {
   "item.redstonemanager.rm_linker": "Linker",
+
   "block.redstonemanager.rm_manager": "Redstone Manager",
+
   "creative.redstonemanager.tab": "Redstone Manager",
 
   "tooltip.redstonemanager.rm_linker.right_click": "Right click on a block to clear connection",
   "tooltip.redstonemanager.rm_linker.shift_right_click": "Crouch + right click a block to link",
   "tooltip.redstonemanager.rm_linker.click_to_toggle_lever": "Click to toggle linked lever",
   "tooltip.redstonemanager.rm_linker.linked_to": "Linked to: %s",
+  "tooltip.redstonemanager.manager.turn_off": "Right click to turn off",
+  "tooltip.redstonemanager.manager.turn_on": "Right click to turn on",
+  "tooltip.redstonemanager.manager.toggle_group_off": "Click to toggle %s off",
+  "tooltip.redstonemanager.manager.toggle_group_on": "Click to toggle %s on",
+  "tooltip.redstonemanager.manager.rename_group": "Rename group: %s",
+  "tooltip.redstonemanager.manager.delete_group": "Delete group: %s",
+  "tooltip.redstonemanager.manager.loading": "Loading...",
+  "tooltip.redstonemanager.manager.create_group": "Create new group",
+  "tooltip.redstonemanager.manager.edit_group": "Rename group",
 
   "message.redstonemanager.connection_cleared": "Connection cleared",
   "message.redstonemanager.manager.insert_linker": "Insert Linker",
@@ -16,16 +27,14 @@
   "errors.redstonemanager.manager.no_block_entity": "No BlockEntity",
   "errors.redstonemanager.manager.not_linked": "Not Linked",
   "errors.redstonemanager.manager.invalid_link": "Invalid Link",
-  "tooltip.redstonemanager.manager.turn_off": "Right click to turn off",
-  "tooltip.redstonemanager.manager.turn_on": "Right click to turn on",
-  "tooltip.redstonemanager.manager.toggle_group_off": "Click to toggle %s off",
-  "tooltip.redstonemanager.manager.toggle_group_on": "Click to toggle %s on",
 
   "label.redstonemanager.manager.turn_off": "Turn Off",
   "label.redstonemanager.manager.turn_on": "Turn On",
   "label.redstonemanager.manager.save": "Save",
   "label.redstonemanager.manager.create": "Create",
-  "tooltip.redstonemanager.manager.rename_group": "Rename group: %s",
-  "tooltip.redstonemanager.manager.delete_group": "Delete group: %s",
-  "tooltip.redstonemanager.manager.loading": "Loading..."
+  "label.redstonemanager.manager.confirm": "Confirm",
+  "label.redstonemanager.manager.cancel": "Cancel",
+  "confirm.redstonemanager.manager.delete_group": "Are you sure you want to delete the group: %s?",
+  "placeholder.redstonemanager.manager.max_group_name": "Maximum of 11 characters",
+  "confirm.redstonemanager.manager.delete_group_desc": "All items in the group will be dropped on the floor!"
 }

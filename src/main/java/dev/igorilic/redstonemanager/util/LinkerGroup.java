@@ -1,15 +1,14 @@
 package dev.igorilic.redstonemanager.util;
 
 import dev.igorilic.redstonemanager.component.ModDataComponents;
+import net.minecraft.core.BlockPos;
 import net.minecraft.tags.TagKey;
-import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Objects;
 
 public class LinkerGroup {
     private String groupName;
@@ -85,9 +84,12 @@ public class LinkerGroup {
 
     public int findLinkerIndex(ItemStack target) {
         for (int i = 0; i < items.size(); i++) {
-            ItemStack linker = items.get(i);
-            if (linker.has(ModDataComponents.ITEM_UUID) && target.has(ModDataComponents.ITEM_UUID)) {
-                if (Objects.equals(linker.get(ModDataComponents.ITEM_UUID), target.get(ModDataComponents.ITEM_UUID))) {
+            ItemStack linker = items.get(i).copy();
+            if (linker.has(ModDataComponents.COORDINATES) && target.has(ModDataComponents.COORDINATES)) {
+                BlockPos linkPos = linker.get(ModDataComponents.COORDINATES);
+                BlockPos targetPos = target.get(ModDataComponents.COORDINATES);
+                assert linkPos != null;
+                if (linkPos.equals(targetPos)) {
                     return i;
                 }
             } else if (ItemStack.isSameItemSameComponents(items.get(i), target)) {
@@ -95,19 +97,6 @@ public class LinkerGroup {
             }
         }
         return -1;
-    }
-
-    public static boolean canLink(ItemStack stack) {
-        boolean hasMatch = false;
-
-        for (TagKey<Item> tag : stack.getTags().toList()) {
-            if (tag.equals(ModTags.Items.LINKABLE_ITEMS)) {
-                hasMatch = true;
-                break;
-            }
-        }
-
-        return hasMatch;
     }
 
     public static boolean canLink(BlockState state) {

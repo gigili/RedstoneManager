@@ -68,6 +68,12 @@ public class PacketHandler {
                 PacketLeverStateRequest.HANDLER
         );
 
+        registrar.playToServer(
+                PacketRefreshGroupPoweredState.TYPE,
+                PacketRefreshGroupPoweredState.STREAM_CODEC,
+                PacketRefreshGroupPoweredState.HANDLER
+        );
+
         registrar.playToClient(
                 PacketLeverStateResponse.TYPE,
                 PacketLeverStateResponse.STREAM_CODEC,
