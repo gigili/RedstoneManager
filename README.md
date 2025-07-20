@@ -48,7 +48,7 @@ implementation "dev.igorilic:redstonemanager:${rm_version}"
 
 # Have suggestions?
 
-If you have any suggestions that you think can improve the modpack, open an issue for it and lets have a disucssion
+If you have any suggestions that you think can improve the modpack, open an issue for it and let's have a discussion
 about it.
 
 Or join the discord server: https://discord.gg/7maXVvt2c4
