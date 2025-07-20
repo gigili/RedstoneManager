@@ -1,4 +1,4 @@
-# Redstone Manager &nbsp;&nbsp; <a href="https://maven.igorilic.dev/#/releases/dev/igorilic/redstonemanager"><img src="https://maven.igorilic.dev/api/badge/latest/releases/dev/igorilic/redstonemanager?color=40c14a&name=Reposilite&prefix=v" alt="Maven version" /></a>
+# Redstone Manager &nbsp;&nbsp; <a href="https://maven.igorilic.dev/#/releases/dev/igorilic/redstonemanager" target="_blank"><img src="https://maven.igorilic.dev/api/badge/latest/releases/dev/igorilic/redstonemanager?color=40c14a&name=Reposilite&prefix=v" alt="Maven version" /></a>
 
 Manage all your redstone switches from one central command block
 
