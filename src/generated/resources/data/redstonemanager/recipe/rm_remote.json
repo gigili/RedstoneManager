@@ -1,0 +1,24 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "redstone",
+  "key": {
+    "C": {
+      "item": "minecraft:comparator"
+    },
+    "D": {
+      "item": "minecraft:redstone"
+    },
+    "P": {
+      "item": "minecraft:ender_pearl"
+    }
+  },
+  "pattern": [
+    "DPD",
+    "PCP",
+    "DPD"
+  ],
+  "result": {
+    "count": 1,
+    "id": "redstonemanager:rm_remote"
+  }
+}

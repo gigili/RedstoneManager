@@ -12,5 +12,11 @@ public class ModItemProperties {
                 ResourceLocation.fromNamespaceAndPath(RedstoneManager.MOD_ID, "linked"),
                 (itemStack, clientLevel, livingEntity, i) -> itemStack.get(ModDataComponents.COORDINATES) != null ? 1f : 0f
         );
+
+        ItemProperties.register(
+                ModItems.RM_REMOTE.get(),
+                ResourceLocation.fromNamespaceAndPath(RedstoneManager.MOD_ID, "linked"),
+                (itemStack, clientLevel, livingEntity, i) -> itemStack.get(ModDataComponents.COORDINATES) != null ? 1f : 0f
+        );
     }
 }

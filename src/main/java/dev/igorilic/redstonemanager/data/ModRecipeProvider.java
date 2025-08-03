@@ -42,5 +42,15 @@ public class ModRecipeProvider extends RecipeProvider implements IConditionBuild
                 .define('P', Items.ENDER_PEARL)
                 .unlockedBy("has_redstone", has(Items.REDSTONE))
                 .save(recipeOutput);
+
+        ShapedRecipeBuilder.shaped(RecipeCategory.REDSTONE, ModItems.RM_REMOTE.get())
+                .pattern("DPD")
+                .pattern("PCP")
+                .pattern("DPD")
+                .define('D', Items.REDSTONE)
+                .define('C', Items.COMPARATOR)
+                .define('P', Items.ENDER_PEARL)
+                .unlockedBy("has_redstone", has(Items.REDSTONE))
+                .save(recipeOutput);
     }
 }

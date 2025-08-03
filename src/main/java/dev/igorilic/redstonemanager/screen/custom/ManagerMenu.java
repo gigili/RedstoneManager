@@ -28,7 +28,7 @@ public class ManagerMenu extends AbstractContainerMenu implements Interact {
     // Each time we add a Slot to the container, it automatically increases the slotIndex, which means
     //  0-8 = hotbar slots (which will map to the InventoryPlayer slot numbers 0-8)
     //  9-35 = player inventory slots (which map to the InventoryPlayer slot numbers 9-35)
-    //  36-44 = TileInventory slots, which map to our TileEntity slot numbers 0-8)
+    //  36-44 = TileInventory slots, which map to our TileEntity slot numbers 0-8
     private static final int HOTBAR_SLOT_COUNT = 9;
     private static final int PLAYER_INVENTORY_ROW_COUNT = 3;
     private static final int PLAYER_INVENTORY_COLUMN_COUNT = 9;

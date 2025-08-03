@@ -79,6 +79,12 @@ public class PacketHandler {
                 PacketLeverStateResponse.STREAM_CODEC,
                 PacketLeverStateResponse.HANDLER
         );
+
+        registrar.playToServer(
+                PacketOpenMenu.TYPE,
+                PacketOpenMenu.STREAM_CODEC,
+                PacketOpenMenu.HANDLER
+        );
     }
 
     public static void sendToClient(ServerPlayer player, PacketLeverStateResponse packet) {

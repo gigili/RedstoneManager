@@ -19,6 +19,7 @@ public class ModCreativeModTabs {
             .title(Component.translatable("creative.redstonemanager.tab"))
             .displayItems(((itemDisplayParameters, output) -> {
                 output.accept(ModItems.RM_LINKER);
+                output.accept(ModItems.RM_REMOTE);
                 output.accept(ModBlocks.RM_MANAGER_BLOCK);
             }))
             .build());

@@ -25,5 +25,16 @@ public class ModItemModelProvider extends ItemModelProvider {
                 .override()
                 .predicate(ResourceLocation.fromNamespaceAndPath(RedstoneManager.MOD_ID, "linked"), 1f)
                 .model(linked);
+
+
+        ModelFile linkedRemote = withExistingParent("rm_remote_linked", "item/generated")
+                .texture("layer0", modLoc("item/rm_remote_linked"));
+
+        // Main model with override
+        withExistingParent("rm_remote", "item/generated")
+                .texture("layer0", modLoc("item/rm_remote"))
+                .override()
+                .predicate(ResourceLocation.fromNamespaceAndPath(RedstoneManager.MOD_ID, "linked"), 1f)
+                .model(linkedRemote);
     }
 }
