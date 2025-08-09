@@ -2,7 +2,6 @@
   "block.redstonemanager.rm_manager": "Redstone Manager",
   "confirm.redstonemanager.manager.delete_group": "Are you sure you want to delete the group: %s?",
   "confirm.redstonemanager.manager.delete_group_desc": "All items in the group will be dropped on the ground!",
-
   "creative.redstonemanager.tab": "Redstone Manager",
   "errors.redstonemanager.manager.invalid_link": "Invalid Link",
   "errors.redstonemanager.manager.no_block_entity": "No BlockEntity",
@@ -17,7 +16,6 @@
   "label.redstonemanager.manager.turn_on": "Turn On",
   "message.redstonemanager.connection_cleared": "Connection cleared",
   "message.redstonemanager.manager.insert_linker": "Insert Linker",
-
   "placeholder.redstonemanager.manager.max_group_name": "Maximum of 11 characters",
   "tooltip.redstonemanager.manager.create_group": "Create new group",
   "tooltip.redstonemanager.manager.delete_group": "Delete group: %s",
