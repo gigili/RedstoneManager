@@ -99,7 +99,8 @@ public class ManagerScreen extends AbstractContainerScreen<ManagerMenu> implemen
         this.items = this.blockEntity.getItems();
         this.imageHeight = 243;
         this.imageWidth = 193;
-        this.inventoryLabelY = this.imageHeight - 95;
+        this.inventoryLabelY = this.imageHeight - 93;
+        this.titleLabelY = this.titleLabelY - 2;
         regenerateFlattenedEntries();
 
         assert Minecraft.getInstance().player != null;
@@ -151,7 +152,7 @@ public class ManagerScreen extends AbstractContainerScreen<ManagerMenu> implemen
         renderTooltip(guiGraphics, mouseX, mouseY);
 
         int newButtonX = leftPos + imageWidth - 36;
-        int newButtonY = topPos + 4;
+        int newButtonY = topPos + 3;
         guiGraphics.blit(GUI_BUTTONS, newButtonX, newButtonY, 0, 0, 11, 11, 33, 11);
         if (mouseX >= newButtonX && mouseX < newButtonX + 11 && mouseY >= newButtonY && mouseY < newButtonY + 11) {
             guiGraphics.renderTooltip(font, Component.translatable("tooltip.redstonemanager.manager.create_group"), mouseX, mouseY);
@@ -165,7 +166,7 @@ public class ManagerScreen extends AbstractContainerScreen<ManagerMenu> implemen
 
         float maxScroll = getTotalRows() - visibleRows;
         float scrollFraction = scrollIndex / (maxScroll * COLUMNS); // use total index range
-        int handleY = Math.max(scrollbarY + (int) ((getScrollbarHeight() - handleHeight) * scrollFraction), scrollbarY + 1);
+        int handleY = Math.max(scrollbarY + (int) ((getScrollbarHeight() - handleHeight) * scrollFraction), scrollbarY);
 
         guiGraphics.blit(GUI_SCROLL_TEXTURE, scrollbarX, handleY, 168, 0, 12, 15, 12, 15);
     }
@@ -227,17 +228,17 @@ public class ManagerScreen extends AbstractContainerScreen<ManagerMenu> implemen
                     RenderSystem.enableScissor(scissorX, scissorY, scissorW, scissorH);
 
                     String visible1 = getVisibleSubstring(font, groupName, pixelOffset, maxVisibleWidth);
-                    guiGraphics.drawString(font, visible1, baseX, baseY, 0x3f3f3f, false);
+                    guiGraphics.drawString(font, visible1, baseX, baseY, 0x80FFE6, false);
 
                     int secondX = baseX + fullTextWidth + loopGap - pixelOffset;
                     if (secondX < baseX + maxVisibleWidth) {
                         String visible2 = getVisibleSubstring(font, groupName, 0, maxVisibleWidth);
-                        guiGraphics.drawString(font, visible2, secondX, baseY, 0x3f3f3f, false);
+                        guiGraphics.drawString(font, visible2, secondX, baseY, 0x80FFE6, false);
                     }
 
                     RenderSystem.disableScissor();
                 } else {
-                    guiGraphics.drawString(font, groupName, startX + 3, rowY + 5, 0x3f3f3f, false);
+                    guiGraphics.drawString(font, groupName, startX + 3, rowY + 5, 0x80FFE6, false);
                 }
 
                 renderToggleButtons(guiGraphics, startX + 3, rowY + 4, groupName, mouseX, mouseY, partialTick);
@@ -260,14 +261,14 @@ public class ManagerScreen extends AbstractContainerScreen<ManagerMenu> implemen
 
                     if (col == 0) {
                         RenderSystem.setShaderTexture(0, GUI_ROW_TEXTURE);
-                        guiGraphics.blit(GUI_ROW_TEXTURE, startX, rowY, 0, 0, 162, 18, 162, 18);
+                        guiGraphics.blit(GUI_ROW_TEXTURE, startX, rowY - 2, 0, 0, 162, 18, 162, 18);
                     }
 
                     if (stack.getItem() instanceof RedstoneLinkerItem) {
-                        guiGraphics.renderItem(stack, x + 1, rowY + 1);
-                        renderLinkerItemBackground(stack, guiGraphics, x + 1, rowY + 1);
+                        guiGraphics.renderItem(stack, x + 1, rowY - 1);
+                        renderLinkerItemBackground(stack, guiGraphics, x + 1, rowY - 1);
 
-                        if (mouseX >= x && mouseX < x + 16 && mouseY >= rowY && mouseY < rowY + 16) {
+                        if (mouseX >= x && mouseX < x + 16 && mouseY >= rowY - 1 && mouseY < rowY - 1 + 16) {
                             BlockPos leverPos = stack.get(ModDataComponents.COORDINATES);
                             if (leverPos != null) {
                                 LeverStateCache.requestIfNeeded(leverPos);
@@ -519,7 +520,7 @@ public class ManagerScreen extends AbstractContainerScreen<ManagerMenu> implemen
 
                     int x = startX + itemCount * slotSize;
 
-                    if (mouseX >= x && mouseX < x + 16 && mouseY >= rowY && mouseY < rowY + 16) {
+                    if (mouseX >= x && mouseX < x + 16 && mouseY >= rowY - 2 && mouseY < rowY - 2 + 16) {
                         LocalPlayer player = Minecraft.getInstance().player;
                         if (!stack.isEmpty()) {
                             if (button == 1) { // RightClick

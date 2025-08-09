@@ -16,6 +16,9 @@ public class ModItemModelProvider extends ItemModelProvider {
     protected void registerModels() {
         //basicItem(ModItems.RM_LINKER.get());
 
+        getBuilder("rm_manager")
+                .parent(getExistingFile(modLoc("item/redstone_manager")));
+
         ModelFile linked = withExistingParent("rm_linker_linked", "item/generated")
                 .texture("layer0", modLoc("item/rm_linker_linked"));
 

@@ -8,8 +8,9 @@ Give credit where credit is due.
 
 ## Textures
 
-* [MangoRage - SWISS](https://github.com/RealMangorage/swss)
-* [Icons8](https://icons8.com)
+All mod textures, including the custom block entity, are made by:
+
+* [Pixelle](https://bsky.app/profile/iampixelle.bsky.social)
 
 ## Tutorials
 

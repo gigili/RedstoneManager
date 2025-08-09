@@ -1,7 +1,19 @@
 {
   "variants": {
-    "": {
-      "model": "redstonemanager:block/rm_manager"
+    "facing=east": {
+      "model": "redstonemanager:block/custom_rm_manager",
+      "y": 90
+    },
+    "facing=north": {
+      "model": "redstonemanager:block/custom_rm_manager"
+    },
+    "facing=south": {
+      "model": "redstonemanager:block/custom_rm_manager",
+      "y": 180
+    },
+    "facing=west": {
+      "model": "redstonemanager:block/custom_rm_manager",
+      "y": 270
     }
   }
 }

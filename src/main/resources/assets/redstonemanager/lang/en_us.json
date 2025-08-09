@@ -36,5 +36,5 @@
   "label.redstonemanager.manager.cancel": "Cancel",
   "confirm.redstonemanager.manager.delete_group": "Are you sure you want to delete the group: %s?",
   "placeholder.redstonemanager.manager.max_group_name": "Maximum of 11 characters",
-  "confirm.redstonemanager.manager.delete_group_desc": "All items in the group will be dropped on the floor!"
+  "confirm.redstonemanager.manager.delete_group_desc": "All items in the group will be dropped on the ground!"
 }
