@@ -16,6 +16,7 @@ public class CreateEditGroupScreen extends Screen {
     private String oldName;
     private Screen parent;
 
+    private Button btnSave;
     private EditBox input;
 
     protected CreateEditGroupScreen(Consumer<String> groupName, String oldName, Screen parent) {
@@ -54,12 +55,14 @@ public class CreateEditGroupScreen extends Screen {
                 ? Component.translatable("label.redstonemanager.manager.create")
                 : Component.translatable("label.redstonemanager.manager.save");
 
-        Button btnSave = Button.builder(btnLabel, (b) -> {
-            groupName.accept(input.getValue());
-            Minecraft.getInstance().setScreen(parent);
+        this.btnSave = Button.builder(btnLabel, (b) -> {
+            groupNameSubmit();
         }).bounds(centerX - 23, centerY + 10, 46, 20).build();
 
-        this.addRenderableWidget(btnSave);
+        this.addRenderableWidget(this.btnSave);
+
+        this.setInitialFocus(this.input);
+        this.input.setFocused(true);
     }
 
     @Override
@@ -102,6 +105,11 @@ public class CreateEditGroupScreen extends Screen {
             return super.keyPressed(keyCode, scanCode, modifiers);
         }
 
+        if (keyCode == GLFW.GLFW_KEY_ENTER || keyCode == GLFW.GLFW_KEY_KP_ENTER) {
+            groupNameSubmit();
+            return true;
+        }
+
         if (input.isFocused()) {
             if (input.keyPressed(keyCode, scanCode, modifiers) || input.canConsumeInput()) {
                 return true;
@@ -109,5 +117,10 @@ public class CreateEditGroupScreen extends Screen {
         }
 
         return super.keyPressed(keyCode, scanCode, modifiers);
+    }
+
+    private void groupNameSubmit() {
+        groupName.accept(input.getValue());
+        Minecraft.getInstance().setScreen(parent);
     }
 }

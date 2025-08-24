@@ -29,6 +29,10 @@ public class LeverStateCache {
         }
     }
 
+    public static void refreshAll() {
+        leverStates.clear();
+    }
+
     public record CachedLever(boolean found, boolean powered, long timestamp) {
     }
 }

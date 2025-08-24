@@ -9,6 +9,7 @@ import dev.igorilic.redstonemanager.util.LeverStateCache;
 import dev.igorilic.redstonemanager.util.LinkerGroup;
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
@@ -32,6 +33,8 @@ import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.LeverBlock;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.block.state.properties.AttachFace;
+import net.minecraft.world.level.gameevent.GameEvent;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -277,50 +280,53 @@ public class RedstoneManagerBlockEntity extends BlockEntity implements MenuProvi
     public void toggleLinkedLever(ItemStack stack, String group) {
         if (level == null || level.isClientSide) return;
 
-        ChunkHandler.tempLoadChunk(((ServerLevel) level), stack, (loadedLevel) -> {
-            if (loadedLevel == null || loadedLevel.isClientSide) return;
-
+        ChunkHandler.tempLoadChunk(((ServerLevel) level), stack, (loaded) -> {
+            if (!(loaded instanceof ServerLevel sl)) return;
             BlockPos leverPos = stack.get(ModDataComponents.COORDINATES);
             if (leverPos == null) return;
 
-            BlockState state = loadedLevel.getBlockState(leverPos);
+            BlockState state = sl.getBlockState(leverPos);
             if (!LinkerGroup.canLink(state)) return;
 
-            boolean isLeverPowered = state.getValue(LeverBlock.POWERED);
-            loadedLevel.setBlock(leverPos, state.setValue(LeverBlock.POWERED, !isLeverPowered), Block.UPDATE_ALL);
-            playSound(SoundEvents.LEVER_CLICK, 0.3f, !isLeverPowered ? 0.5F : 0.6F);
+            flipLeverVanilla(sl, leverPos);
 
-            LeverStateCache.update(leverPos, true, !isLeverPowered);
+            LeverStateCache.update(leverPos, true, sl.getBlockState(leverPos).getValue(LeverBlock.POWERED));
             updateGroupPoweredState(group);
+            playSound(SoundEvents.LEVER_CLICK, 0.3f, sl.getBlockState(leverPos).getValue(LeverBlock.POWERED) ? 0.6F : 0.5F);
         });
     }
 
     public void toggleAllLinkedLever(String groupName) {
-        if (level == null || level.isClientSide) return;
+        if (!(level instanceof ServerLevel server)) return;
         if (!items.containsKey(groupName)) return;
-        if (items.get(groupName).getItems().isEmpty()) return;
 
-        boolean allOn = items.get(groupName).isPowered();
+        ItemStack any = items.get(groupName).getItems().stream()
+                .filter(s -> s.getItem() instanceof RedstoneLinkerItem)
+                .findFirst().orElse(ItemStack.EMPTY);
 
-        ItemStack item = items.get(groupName).getItems().stream().filter(stack -> !stack.isEmpty() && stack.has(ModDataComponents.COORDINATES)).findFirst().orElse(ItemStack.EMPTY);
+        ChunkHandler.tempLoadChunk(server, any, loaded -> {
+            if (!(loaded instanceof ServerLevel sl)) return;
 
-        ChunkHandler.tempLoadChunk(((ServerLevel) level), item, (loadedLevel) -> {
+            boolean target = !items.get(groupName).isPowered();
+
             for (ItemStack stack : items.get(groupName).getItems()) {
                 if (!(stack.getItem() instanceof RedstoneLinkerItem)) continue;
+                BlockPos pos = stack.get(ModDataComponents.COORDINATES);
+                if (pos == null) continue;
 
-                BlockPos leverPos = stack.get(ModDataComponents.COORDINATES);
+                BlockState st = sl.getBlockState(pos);
+                if (!LinkerGroup.canLink(st)) continue;
 
-                if (leverPos == null) continue;
+                // only flip if needed
+                if (st.getValue(LeverBlock.POWERED) != target) {
+                    flipLeverVanilla(sl, pos);
+                }
 
-                BlockState state = loadedLevel.getBlockState(leverPos);
-                if (!LinkerGroup.canLink(state)) continue;
-
-                LeverStateCache.update(leverPos, true, !allOn);
-                loadedLevel.setBlock(leverPos, state.setValue(LeverBlock.POWERED, !allOn), Block.UPDATE_ALL);
+                LeverStateCache.update(pos, true, target);
             }
 
-            items.get(groupName).setPowered(!allOn);
-            playSound(SoundEvents.LEVER_CLICK, 0.3f, !allOn ? 0.5F : 0.6F);
+            items.get(groupName).setPowered(target);
+            playSound(SoundEvents.LEVER_CLICK, 0.3f, target ? 0.6F : 0.5F);
             updateGroupPoweredState(groupName);
         });
     }
@@ -339,5 +345,41 @@ public class RedstoneManagerBlockEntity extends BlockEntity implements MenuProvi
     public void playSound(SoundEvent soundEvent, float volume, float pitch) {
         if (level == null || level.isClientSide) return;
         level.playSound(null, getBlockPos(), soundEvent, SoundSource.BLOCKS, volume, pitch);
+    }
+
+    private static Direction connectedDir(BlockState s) {
+        AttachFace face = s.getValue(LeverBlock.FACE);
+        Direction facing = s.getValue(LeverBlock.FACING);
+        return switch (face) {
+            case FLOOR -> Direction.UP;
+            case CEILING -> Direction.DOWN;
+            case WALL -> facing;
+        };
+    }
+
+    private static void flipLeverVanilla(ServerLevel level, BlockPos pos) {
+        BlockState old = level.getBlockState(pos);
+        if (!(old.getBlock() instanceof LeverBlock)) return;
+
+        BlockState toggled = old.cycle(LeverBlock.POWERED);
+
+        // set + notify clients (vanilla uses flags 3 = UPDATE_CLIENTS | BLOCK_UPDATE)
+        level.setBlock(pos, toggled, Block.UPDATE_ALL);
+
+        // neighbor notifications at lever pos
+        level.updateNeighborsAt(pos, toggled.getBlock());
+        level.updateNeighbourForOutputSignal(pos, toggled.getBlock());
+
+        // neighbor notifications at the block it’s attached to (power goes out that way)
+        Direction out = connectedDir(toggled).getOpposite();
+        BlockPos attached = pos.relative(out);
+        level.updateNeighborsAt(attached, toggled.getBlock());
+        level.updateNeighbourForOutputSignal(attached, toggled.getBlock());
+
+        // ensure redstone re-evaluates shapes (some dust layouts need this)
+        level.blockUpdated(pos, toggled.getBlock());
+
+        // game event (optional but matches vanilla)
+        level.gameEvent(null, toggled.getValue(LeverBlock.POWERED) ? GameEvent.BLOCK_ACTIVATE : GameEvent.BLOCK_DEACTIVATE, pos);
     }
 }

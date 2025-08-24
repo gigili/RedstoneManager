@@ -19,7 +19,7 @@ public class ModBlocks {
 
     public static final DeferredBlock<Block> RM_MANAGER_BLOCK = registerBlock(
             "rm_manager",
-            () -> new RedstoneManagerBlock(BlockBehaviour.Properties.of().strength(4f).requiresCorrectToolForDrops().sound(SoundType.METAL))
+            () -> new RedstoneManagerBlock(BlockBehaviour.Properties.of().strength(4f).requiresCorrectToolForDrops().sound(SoundType.METAL).noOcclusion())
     );
 
     private static <T extends Block> DeferredBlock<T> registerBlock(String name, Supplier<T> block) {

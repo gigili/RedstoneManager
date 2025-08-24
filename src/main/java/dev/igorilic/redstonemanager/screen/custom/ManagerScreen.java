@@ -101,6 +101,7 @@ public class ManagerScreen extends AbstractContainerScreen<ManagerMenu> implemen
         this.imageWidth = 193;
         this.inventoryLabelY = this.imageHeight - 93;
         this.titleLabelY = this.titleLabelY - 2;
+        LeverStateCache.refreshAll();
         regenerateFlattenedEntries();
 
         assert Minecraft.getInstance().player != null;
