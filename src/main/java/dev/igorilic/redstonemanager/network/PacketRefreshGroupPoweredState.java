@@ -29,7 +29,6 @@ public record PacketRefreshGroupPoweredState(BlockPos managerPos) implements Cus
         if (context.player() instanceof ServerPlayer player) {
             if (player.level().getBlockEntity(payload.managerPos()) instanceof RedstoneManagerBlockEntity be) {
                 be.updateGroupPoweredState();
-                be.setChanged();
                 player.level().sendBlockUpdated(be.getBlockPos(), be.getBlockState(), be.getBlockState(), 3);
             }
         }

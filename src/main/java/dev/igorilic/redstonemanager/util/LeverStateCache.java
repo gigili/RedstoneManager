@@ -16,6 +16,8 @@ public class LeverStateCache {
     }
 
     public static Optional<CachedLever> get(BlockPos pos) {
+        if (leverStates.isEmpty()) return Optional.empty();
+
         CachedLever cached = leverStates.get(pos);
         if (cached == null || (System.currentTimeMillis() - cached.timestamp) > 60_000) {
             return Optional.empty(); // stale
@@ -24,7 +26,7 @@ public class LeverStateCache {
     }
 
     public static void requestIfNeeded(BlockPos pos) {
-        if (get(pos).isEmpty()) {
+        if (leverStates.isEmpty() || get(pos).isEmpty()) {
             PacketHandler.sendToServer(new PacketLeverStateRequest(pos));
         }
     }

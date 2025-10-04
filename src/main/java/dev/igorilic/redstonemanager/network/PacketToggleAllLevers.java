@@ -32,8 +32,7 @@ public record PacketToggleAllLevers(BlockPos managerPos, String groupName) imple
     public static final IPayloadHandler<PacketToggleAllLevers> HANDLER = (payload, context) -> {
         if (context.player() instanceof ServerPlayer player) {
             if (player.level().getBlockEntity(payload.managerPos()) instanceof RedstoneManagerBlockEntity be) {
-                be.toggleAllLinkedLever(payload.groupName);
-                be.setChanged();
+                be.toggleAllLinkedLever(payload.groupName, player);
                 player.level().sendBlockUpdated(be.getBlockPos(), be.getBlockState(), be.getBlockState(), 3);
             }
         }

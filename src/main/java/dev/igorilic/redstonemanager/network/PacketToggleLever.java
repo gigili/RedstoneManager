@@ -37,9 +37,7 @@ public record PacketToggleLever(BlockPos managerPos, ItemStack linkerItem,
             if (player.level().getBlockEntity(payload.managerPos()) instanceof RedstoneManagerBlockEntity be) {
                 ItemStack linkerToToggle = payload.linkerItem();
                 if (!linkerToToggle.isEmpty()) {
-                    be.toggleLinkedLever(linkerToToggle, payload.group);
-                    // Sync the block entity to update the client
-                    be.setChanged();
+                    be.toggleLinkedLever(linkerToToggle, payload.group, player);
                 }
                 player.level().sendBlockUpdated(be.getBlockPos(), be.getBlockState(), be.getBlockState(), 3);
             }

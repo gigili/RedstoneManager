@@ -267,7 +267,7 @@ public class ManagerScreen extends AbstractContainerScreen<ManagerMenu> implemen
 
                     if (stack.getItem() instanceof RedstoneLinkerItem) {
                         guiGraphics.renderItem(stack, x + 1, rowY - 1);
-                        renderLinkerItemBackground(stack, guiGraphics, x + 1, rowY - 1);
+                        renderLinkerItemBackground(group, stack, guiGraphics, x + 1, rowY - 1);
 
                         if (mouseX >= x && mouseX < x + 16 && mouseY >= rowY - 1 && mouseY < rowY - 1 + 16) {
                             BlockPos leverPos = stack.get(ModDataComponents.COORDINATES);
@@ -328,6 +328,8 @@ public class ManagerScreen extends AbstractContainerScreen<ManagerMenu> implemen
 
     private void renderToggleButtons(@NotNull GuiGraphics guiGraphics, int startX, int startY, String groupName, int mouseX, int mouseY, float partialTick) {
         LinkerGroup linker = items.get(groupName);
+        if (linker == null) return;
+
         boolean allOn = linker.isPowered();
 
         if (allOn) {
@@ -365,7 +367,7 @@ public class ManagerScreen extends AbstractContainerScreen<ManagerMenu> implemen
         }
     }
 
-    private void renderLinkerItemBackground(ItemStack linkerItem, GuiGraphics guiGraphics, int slotX, int slotY) {
+    private void renderLinkerItemBackground(String group, ItemStack linkerItem, GuiGraphics guiGraphics, int slotX, int slotY) {
         BlockPos leverPos = linkerItem.get(ModDataComponents.COORDINATES);
         int slotSize = 16;
 
@@ -425,6 +427,7 @@ public class ManagerScreen extends AbstractContainerScreen<ManagerMenu> implemen
 
         int newButtonX = leftPos + imageWidth - 36;
         int newButtonY = topPos + 4;
+        // Create a group button
         if (mouseX >= newButtonX && mouseX < newButtonX + 11 && mouseY >= newButtonY && mouseY < newButtonY + 11) {
             assert Minecraft.getInstance().player != null;
             Minecraft.getInstance().player.connection.send(new PacketPlaySound(blockEntity.getBlockPos(), Holder.direct(SoundEvents.UI_BUTTON_CLICK.value()), 0.3f, 1f));
@@ -468,6 +471,7 @@ public class ManagerScreen extends AbstractContainerScreen<ManagerMenu> implemen
 
             if (entry instanceof HeaderEntry(String groupName)) {
                 int rowX = startX + 137;
+                // Toggle all levers in the group button
                 if (mouseX >= rowX && mouseX < rowX + 20 && mouseY >= rowY && mouseY < rowY + 11) {
                     assert Minecraft.getInstance().player != null;
                     Minecraft.getInstance().player.connection.send(new PacketToggleAllLevers(blockEntity.getBlockPos(), groupName));
