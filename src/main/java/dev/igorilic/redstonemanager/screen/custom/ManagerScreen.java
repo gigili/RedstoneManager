@@ -101,8 +101,8 @@ public class ManagerScreen extends AbstractContainerScreen<ManagerMenu> implemen
         this.imageWidth = 193;
         this.inventoryLabelY = this.imageHeight - 93;
         this.titleLabelY = this.titleLabelY - 2;
-        LeverStateCache.refreshAll();
         regenerateFlattenedEntries();
+        LeverStateCache.refreshAll();
 
         assert Minecraft.getInstance().player != null;
         Minecraft.getInstance().player.connection.send(new PacketRefreshGroupPoweredState(blockEntity.getBlockPos()));
@@ -407,16 +407,14 @@ public class ManagerScreen extends AbstractContainerScreen<ManagerMenu> implemen
     private void handleCreateEditGroup(String newName) {
         if (newName.isEmpty()) return;
 
-        /*if (newName.length() > 11) {
-            newName = newName.substring(0, 11);
-        }*/
-
         assert Minecraft.getInstance().player != null;
         if (isEditingGroup && !newName.equals(oldGroupName)) {
             Minecraft.getInstance().player.connection.send(new PacketRenameGroup(blockEntity.getBlockPos(), oldGroupName, newName));
         } else {
             Minecraft.getInstance().player.connection.send(new PacketCreateGroup(blockEntity.getBlockPos(), newName));
         }
+
+        regenerateFlattenedEntries();
 
         isEditingGroup = false;
     }
@@ -632,8 +630,13 @@ public class ManagerScreen extends AbstractContainerScreen<ManagerMenu> implemen
     }
 
     @Override
-    public void update() {
-        this.items = this.blockEntity.getItems();
+    public void update(Map<String, LinkerGroup> items) {
+        this.items = items != null ? items : this.blockEntity.getItems();
         regenerateFlattenedEntries();
+    }
+
+    @Override
+    public boolean isPauseScreen() {
+        return false;
     }
 }

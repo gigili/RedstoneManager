@@ -8,6 +8,7 @@ import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.level.block.Block;
 import net.neoforged.neoforge.network.handling.IPayloadHandler;
 
 public record PacketRefreshGroupPoweredState(BlockPos managerPos) implements CustomPacketPayload {
@@ -29,7 +30,7 @@ public record PacketRefreshGroupPoweredState(BlockPos managerPos) implements Cus
         if (context.player() instanceof ServerPlayer player) {
             if (player.level().getBlockEntity(payload.managerPos()) instanceof RedstoneManagerBlockEntity be) {
                 be.updateGroupPoweredState();
-                player.level().sendBlockUpdated(be.getBlockPos(), be.getBlockState(), be.getBlockState(), 3);
+                player.level().sendBlockUpdated(be.getBlockPos(), be.getBlockState(), be.getBlockState(), Block.UPDATE_ALL);
             }
         }
     };

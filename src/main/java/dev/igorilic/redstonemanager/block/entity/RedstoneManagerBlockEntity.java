@@ -72,8 +72,9 @@ public class RedstoneManagerBlockEntity extends BlockEntity implements MenuProvi
         return Collections.unmodifiableMap(items);
     }
 
-    public void createGroup(String groupName) {
+    public void createGroup(String groupName, ServerPlayer player) {
         items.computeIfAbsent(groupName, k -> new LinkerGroup(groupName)).addItem(ItemStack.EMPTY);
+        updateGroupPoweredState(groupName);
         setChanged();
         if (level != null) {
             level.sendBlockUpdated(getBlockPos(), getBlockState(), getBlockState(), Block.UPDATE_ALL);
@@ -101,6 +102,10 @@ public class RedstoneManagerBlockEntity extends BlockEntity implements MenuProvi
 
         items.remove(oldName);
         items.put(newName, group);
+        setChanged();
+        if (level != null) {
+            level.sendBlockUpdated(getBlockPos(), getBlockState(), getBlockState(), Block.UPDATE_ALL);
+        }
     }
 
     public void deleteGroup(String groupName) {
@@ -211,6 +216,12 @@ public class RedstoneManagerBlockEntity extends BlockEntity implements MenuProvi
 
         tag.put("Groups", groupList);
         setChanged();
+        if (level != null && level.isClientSide) {
+            var mc = net.minecraft.client.Minecraft.getInstance();
+            mc.execute(() -> {
+                if (mc.screen instanceof IUpdatable ui) ui.update(items);
+            });
+        }
     }
 
     @Override
@@ -242,6 +253,12 @@ public class RedstoneManagerBlockEntity extends BlockEntity implements MenuProvi
         }
 
         setChanged();
+        if (level != null && level.isClientSide) {
+            var mc = net.minecraft.client.Minecraft.getInstance();
+            mc.execute(() -> {
+                if (mc.screen instanceof IUpdatable ui) ui.update(items);
+            });
+        }
     }
 
     public void drops() {
@@ -386,11 +403,5 @@ public class RedstoneManagerBlockEntity extends BlockEntity implements MenuProvi
     @Override
     public void handleUpdateTag(@NotNull CompoundTag tag, HolderLookup.@NotNull Provider registries) {
         loadAdditional(tag, registries);
-        if (level != null && level.isClientSide) {
-            var mc = net.minecraft.client.Minecraft.getInstance();
-            mc.execute(() -> {
-                if (mc.screen instanceof IUpdatable ui) ui.update();
-            });
-        }
     }
 }

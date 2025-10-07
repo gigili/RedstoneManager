@@ -9,6 +9,7 @@ import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.level.block.Block;
 import net.neoforged.neoforge.network.handling.IPayloadHandler;
 import org.jetbrains.annotations.NotNull;
 
@@ -32,9 +33,9 @@ public record PacketCreateGroup(BlockPos managerPos, String groupName) implement
     public static final IPayloadHandler<PacketCreateGroup> HANDLER = (payload, context) -> {
         if (context.player() instanceof ServerPlayer player) {
             if (player.level().getBlockEntity(payload.managerPos()) instanceof RedstoneManagerBlockEntity be) {
-                be.createGroup(payload.groupName);
+                be.createGroup(payload.groupName, player);
                 be.setChanged();
-                player.level().sendBlockUpdated(be.getBlockPos(), be.getBlockState(), be.getBlockState(), 3);
+                player.level().sendBlockUpdated(be.getBlockPos(), be.getBlockState(), be.getBlockState(), Block.UPDATE_ALL);
             }
         }
     };
