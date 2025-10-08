@@ -1,5 +1,6 @@
 package dev.igorilic.redstonemanager.block.entity;
 
+import dev.igorilic.redstonemanager.Config;
 import dev.igorilic.redstonemanager.component.ModDataComponents;
 import dev.igorilic.redstonemanager.item.custom.RedstoneLinkerItem;
 import dev.igorilic.redstonemanager.network.PacketHandler;
@@ -180,8 +181,10 @@ public class RedstoneManagerBlockEntity extends BlockEntity implements MenuProvi
         items.get(groupName).removeItem(item);
 
         boolean isEmpty = items.get(groupName).getItems().isEmpty() || items.get(groupName).getItems().stream().allMatch(ItemStack::isEmpty);
-        if (isEmpty) {
+        if (isEmpty && Config.DELETE_EMPTY_GROUPS.get()) {
             this.items.remove(groupName);
+        } else {
+            this.items.get(groupName).addItem(ItemStack.EMPTY);
         }
 
         setChanged();
