@@ -1,18 +1,24 @@
 package dev.igorilic.redstonemanager;
 
-import net.neoforged.bus.api.SubscribeEvent;
-import net.neoforged.fml.common.EventBusSubscriber;
-import net.neoforged.fml.event.config.ModConfigEvent;
 import net.neoforged.neoforge.common.ModConfigSpec;
 
-@EventBusSubscriber(modid = RedstoneManager.MOD_ID)
 public class Config {
     private static final ModConfigSpec.Builder BUILDER = new ModConfigSpec.Builder();
+    public static final ModConfigSpec SPEC;
+    public static final ModConfigSpec.ConfigValue<Boolean> DELETE_EMPTY_GROUPS;
 
-    static final ModConfigSpec SPEC = BUILDER.build();
+    static {
+        BUILDER.comment("Redstone Manager Config");
 
-    @SubscribeEvent
-    static void onLoad(final ModConfigEvent event) {
+        // General
+        BUILDER.push("General");
 
+        DELETE_EMPTY_GROUPS = BUILDER
+                .comment("Whether empty groups should be deleted from the Redstone Manager")
+                .define("delete_empty_groups", false);
+
+        BUILDER.pop();
+
+        SPEC = BUILDER.build();
     }
 }
