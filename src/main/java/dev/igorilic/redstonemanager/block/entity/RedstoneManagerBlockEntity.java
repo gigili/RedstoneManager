@@ -11,6 +11,7 @@ import dev.igorilic.redstonemanager.util.LinkerGroup;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.HolderLookup;
+import net.minecraft.core.registries.Registries;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.Tag;
@@ -19,6 +20,9 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.network.protocol.Packet;
 import net.minecraft.network.protocol.game.ClientGamePacketListener;
 import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
+import net.minecraft.resources.ResourceKey;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvent;
@@ -31,6 +35,7 @@ import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.LeverBlock;
 import net.minecraft.world.level.block.entity.BlockEntity;
@@ -141,19 +146,32 @@ public class RedstoneManagerBlockEntity extends BlockEntity implements MenuProvi
         setChanged();
     }
 
+    private ServerLevel resolveLevel(ResourceLocation dimId) {
+        if (!(level instanceof ServerLevel sl)) return null;
+        MinecraftServer srv = sl.getServer();
+        ResourceKey<Level> key = ResourceKey.create(Registries.DIMENSION, dimId);
+        return srv.getLevel(key);
+    }
+
     private void updateGroupPoweredState(String groupName, Boolean changed) {
-        if (level == null || level.isClientSide) return;
-        if (!items.containsKey(groupName)) return;
+        if (!(level instanceof ServerLevel current) || !items.containsKey(groupName)) return;
 
         boolean isOn = false;
         for (ItemStack stack : items.get(groupName).getItems()) {
             if (!(stack.getItem() instanceof RedstoneLinkerItem)) continue;
 
             BlockPos leverPos = stack.get(ModDataComponents.COORDINATES);
+            ResourceLocation dimension = stack.get(ModDataComponents.DIMENSION);
+
+            ServerLevel target = Objects.equals(current.dimension().location(), dimension)
+                    ? current
+                    : resolveLevel(dimension);
+
+            if (target == null) continue;
 
             if (leverPos == null) continue;
 
-            BlockState state = level.getBlockState(leverPos);
+            BlockState state = target.getBlockState(leverPos);
             if (!LinkerGroup.canLink(state)) continue;
 
             if (state.getValue(LeverBlock.POWERED)) {
@@ -300,17 +318,23 @@ public class RedstoneManagerBlockEntity extends BlockEntity implements MenuProvi
     }
 
     public void toggleLinkedLever(ItemStack stack, String group, ServerPlayer player) {
-        if (level == null || level.isClientSide) return;
+        if (!(level instanceof ServerLevel current)) return;
 
-        if (!(level instanceof ServerLevel sl)) return;
+        ResourceLocation dimension = stack.get(ModDataComponents.DIMENSION);
+        ServerLevel target = Objects.equals(current.dimension().location(), dimension)
+                ? current
+                : resolveLevel(dimension);
+
+        if (target == null) return;
+
         BlockPos leverPos = stack.get(ModDataComponents.COORDINATES);
         if (leverPos == null) return;
 
-        BlockState state = sl.getBlockState(leverPos);
+        BlockState state = target.getBlockState(leverPos);
         if (!LinkerGroup.canLink(state)) return;
 
         boolean isPowered = state.getValue(LeverBlock.POWERED);
-        flipLeverVanilla(sl, leverPos);
+        flipLeverVanilla(target, leverPos);
 
         updateGroupPoweredState(group);
         PacketHandler.sendToClient(player, new PacketLeverStateResponse(leverPos, true, !isPowered));
@@ -329,11 +353,18 @@ public class RedstoneManagerBlockEntity extends BlockEntity implements MenuProvi
             BlockPos pos = stack.get(ModDataComponents.COORDINATES);
             if (pos == null) continue;
 
-            BlockState st = sl.getBlockState(pos);
+            ResourceLocation dimension = stack.get(ModDataComponents.DIMENSION);
+            ServerLevel targetDimension = Objects.equals(level.dimension().location(), dimension)
+                    ? sl
+                    : resolveLevel(dimension);
+
+            if (targetDimension == null) return;
+
+            BlockState st = targetDimension.getBlockState(pos);
             if (!LinkerGroup.canLink(st)) continue;
 
             if (st.getValue(LeverBlock.POWERED) != target) {
-                flipLeverVanilla(sl, pos);
+                flipLeverVanilla(targetDimension, pos);
                 PacketHandler.sendToClient(player, new PacketLeverStateResponse(pos, true, target));
             }
         }
@@ -379,7 +410,7 @@ public class RedstoneManagerBlockEntity extends BlockEntity implements MenuProvi
         // set + notify clients (vanilla uses flags 3 = UPDATE_CLIENTS | BLOCK_UPDATE)
         level.setBlock(pos, toggled, Block.UPDATE_ALL);
 
-        // neighbor notifications at lever pos
+        // neighbor notifications at lever levelPosition
         level.updateNeighborsAt(pos, toggled.getBlock());
         level.updateNeighbourForOutputSignal(pos, toggled.getBlock());
 

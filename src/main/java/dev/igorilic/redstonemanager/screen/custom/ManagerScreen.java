@@ -271,8 +271,9 @@ public class ManagerScreen extends AbstractContainerScreen<ManagerMenu> implemen
 
                         if (mouseX >= x && mouseX < x + 16 && mouseY >= rowY - 1 && mouseY < rowY - 1 + 16) {
                             BlockPos leverPos = stack.get(ModDataComponents.COORDINATES);
+                            ResourceLocation leverDimension = stack.get(ModDataComponents.DIMENSION);
                             if (leverPos != null) {
-                                LeverStateCache.requestIfNeeded(leverPos);
+                                LeverStateCache.requestIfNeeded(leverPos, Optional.ofNullable(leverDimension));
 
                                 LeverStateCache.get(leverPos).ifPresentOrElse(cached -> {
                                     Component extraLabel;
@@ -369,11 +370,12 @@ public class ManagerScreen extends AbstractContainerScreen<ManagerMenu> implemen
 
     private void renderLinkerItemBackground(String group, ItemStack linkerItem, GuiGraphics guiGraphics, int slotX, int slotY) {
         BlockPos leverPos = linkerItem.get(ModDataComponents.COORDINATES);
+        ResourceLocation leverDimension = linkerItem.get(ModDataComponents.DIMENSION);
         int slotSize = 16;
 
         int color;
         if (leverPos != null) {
-            LeverStateCache.requestIfNeeded(leverPos); // Triggers request if needed
+            LeverStateCache.requestIfNeeded(leverPos, Optional.ofNullable(leverDimension)); // Triggers request if needed
 
             Optional<LeverStateCache.CachedLever> cached = LeverStateCache.get(leverPos);
             color = cached.map(cachedLever -> cachedLever.powered() ? 0x7700FF00 : 0x77FF0000).orElse(0x77444444);

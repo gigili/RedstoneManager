@@ -28,6 +28,7 @@
   "tooltip.redstonemanager.manager.turn_on": "Right click to turn on",
   "tooltip.redstonemanager.rm_linker.click_to_toggle_lever": "Click to toggle linked lever",
   "tooltip.redstonemanager.rm_linker.linked_to": "Linked to: %s",
+  "tooltip.redstonemanager.rm_linker.linked_in": "Linked in: %s",
   "tooltip.redstonemanager.rm_linker.right_click": "Right click on a block to clear connection",
   "tooltip.redstonemanager.rm_linker.shift_right_click": "Crouch + right click a block to link"
 }

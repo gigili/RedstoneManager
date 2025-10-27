@@ -31,14 +31,6 @@ repositories {
     }
 
     maven {
-        url "https://maven.latvian.dev/releases"
-        content {
-            includeGroup "dev.latvian.mods"
-            includeGroup "dev.latvian.apps"
-        }
-    }
-
-    maven {
         url 'https://jitpack.io'
         content {
             includeGroup "com.github.rtyley"
@@ -161,11 +153,20 @@ dependencies {
 
     implementation "maven.modrinth:jade:${jade_version}"
 
-    api("dev.latvian.mods:kubejs-neoforge:$kubejs_version")
-    interfaceInjectionData("dev.latvian.mods:kubejs-neoforge:$kubejs_version")
-
     runtimeOnly "curse.maven:xycraft-653786:6872525"
     runtimeOnly "curse.maven:xycraft-world-653789:6872532"
+
+    // Architectury
+    runtimeOnly("curse.maven:architectury-api-419699:5786327")
+
+    // FTB Chunks 2101.1.12 (1.21.1)
+    runtimeOnly("curse.maven:ftb-chunks-forge-314906:7155422")
+
+    // FTB Library 2101.1.17 (1.21.1)
+    runtimeOnly("curse.maven:ftb-library-forge-404465:7151938")
+
+    // FTB Teams 2101.1.1 (1.21.1)
+    runtimeOnly("curse.maven:ftb-teams-forge-404468:7144060")
 }
 
 // This block of code expands all declared replace properties in the specified resource targets.

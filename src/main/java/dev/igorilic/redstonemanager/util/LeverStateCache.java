@@ -3,6 +3,7 @@ package dev.igorilic.redstonemanager.util;
 import dev.igorilic.redstonemanager.network.PacketHandler;
 import dev.igorilic.redstonemanager.network.PacketLeverStateRequest;
 import net.minecraft.core.BlockPos;
+import net.minecraft.resources.ResourceLocation;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -25,9 +26,9 @@ public class LeverStateCache {
         return Optional.of(cached);
     }
 
-    public static void requestIfNeeded(BlockPos pos) {
+    public static void requestIfNeeded(BlockPos pos, Optional<ResourceLocation> dim) {
         if (leverStates.isEmpty() || get(pos).isEmpty()) {
-            PacketHandler.sendToServer(new PacketLeverStateRequest(pos));
+            PacketHandler.sendToServer(new PacketLeverStateRequest(pos, dim));
         }
     }
 
