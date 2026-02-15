@@ -85,6 +85,7 @@ public class RedstoneManagerBlock extends BaseEntityBlock {
         super.onRemove(state, level, blockPos, newState, movedByPiston);
     }
 
+
     @Override
     public @NotNull InteractionResult useWithoutItem(@NotNull BlockState blockState, Level level, @NotNull BlockPos pos, @NotNull Player player, @NotNull BlockHitResult hit) {
         if (!level.isClientSide()) {

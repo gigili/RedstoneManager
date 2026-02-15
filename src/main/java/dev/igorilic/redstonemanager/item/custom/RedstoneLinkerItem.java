@@ -1,10 +1,13 @@
 package dev.igorilic.redstonemanager.item.custom;
 
+import dev.igorilic.redstonemanager.block.ModBlocks;
+import dev.igorilic.redstonemanager.block.entity.RedstoneManagerBlockEntity;
 import dev.igorilic.redstonemanager.component.ModDataComponents;
 import dev.igorilic.redstonemanager.util.LinkerGroup;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.InteractionResult;
@@ -15,6 +18,7 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.TooltipFlag;
 import net.minecraft.world.item.context.UseOnContext;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.state.BlockState;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.List;
@@ -45,38 +49,86 @@ public class RedstoneLinkerItem extends Item {
     @Override
     public @NotNull InteractionResult useOn(UseOnContext context) {
         Level level = context.getLevel();
+        BlockPos pos = context.getClickedPos();
+        BlockState state = level.getBlockState(pos);
+        Player player = context.getPlayer();
+        ItemStack stack = context.getItemInHand();
+
+        if (player == null) return InteractionResult.FAIL;
+
+        if (state.is(ModBlocks.RM_MANAGER_BLOCK.get())) {
+            if (player.isCrouching()) {
+                if (!level.isClientSide) {
+                    if (level.getBlockEntity(pos) instanceof RedstoneManagerBlockEntity blockEntity) {
+                        blockEntity.handleBulkLink(stack, (ServerPlayer) player);
+                    }
+                }
+                return InteractionResult.sidedSuccess(level.isClientSide);
+            } else {
+                return InteractionResult.PASS;
+            }
+        }
 
         if (!level.isClientSide) {
-            if (context.getPlayer() != null) {
-                if (context.getPlayer().isCrouching()) {
-                    if (LinkerGroup.canLink(level.getBlockState(context.getClickedPos()))) {
-                        //RMLogger.info("Redstone linker linked to: %s", context.getClickedPos());
-                        context.getItemInHand().set(ModDataComponents.COORDINATES, context.getClickedPos());
-                        context.getItemInHand().set(ModDataComponents.DIMENSION, level.dimension().location());
-                        level.playSound(null, context.getClickedPos(), SoundEvents.STONE_BUTTON_CLICK_ON, SoundSource.BLOCKS, 1.0F, 1.0F);
-                        return InteractionResult.SUCCESS;
-                    }
+            if (player.isCrouching()) {
+                if (LinkerGroup.canLink(state)) {
+                    stack.set(ModDataComponents.COORDINATES, pos);
+                    stack.set(ModDataComponents.DIMENSION, level.dimension().location());
+                    stack.set(ModDataComponents.COORDINATES_START, null);
+                    stack.set(ModDataComponents.COORDINATES_END, null);
+                    level.playSound(null, pos, SoundEvents.STONE_BUTTON_CLICK_ON, SoundSource.BLOCKS, 1.0F, 1.0F);
                 } else {
-                    context.getPlayer().sendSystemMessage(Component.translatable("message.redstonemanager.connection_cleared"));
-                    context.getItemInHand().set(ModDataComponents.COORDINATES, null);
-                    context.getItemInHand().set(ModDataComponents.DIMENSION, null);
+                    player.sendSystemMessage(Component.translatable("message.redstonemanager.connection_cleared"));
+                    stack.set(ModDataComponents.COORDINATES, null);
+                    stack.set(ModDataComponents.DIMENSION, null);
+                    stack.set(ModDataComponents.COORDINATES_START, null);
+                    stack.set(ModDataComponents.COORDINATES_END, null);
+                }
+            } else {
+                if (stack.get(ModDataComponents.COORDINATES_START) == null) {
+                    stack.set(ModDataComponents.COORDINATES_START, pos);
+                    stack.set(ModDataComponents.DIMENSION, level.dimension().location());
+                    stack.set(ModDataComponents.COORDINATES, null); // Clear direct link
+                    player.sendSystemMessage(Component.translatable("message.redstonemanager.area_start_set", pos.toShortString()));
+                } else if (stack.get(ModDataComponents.COORDINATES_END) == null) {
+                    stack.set(ModDataComponents.COORDINATES_END, pos);
+                    player.sendSystemMessage(Component.translatable("message.redstonemanager.area_end_set", pos.toShortString()));
+                } else {
+                    stack.set(ModDataComponents.COORDINATES_START, null);
+                    stack.set(ModDataComponents.COORDINATES_END, null);
+                    stack.set(ModDataComponents.DIMENSION, null);
+                    player.sendSystemMessage(Component.translatable("message.redstonemanager.area_cleared"));
                 }
             }
 
-            context.getPlayer().getInventory().setChanged();
+            player.getInventory().setChanged();
         }
 
-        return InteractionResult.SUCCESS;
+        return InteractionResult.sidedSuccess(level.isClientSide);
     }
 
     @Override
     public void appendHoverText(@NotNull ItemStack itemStack, @NotNull TooltipContext context, List<Component> tooltipComponent, @NotNull TooltipFlag tooltipFlag) {
         tooltipComponent.add(Component.translatable("tooltip.redstonemanager.rm_linker.right_click"));
         tooltipComponent.add(Component.translatable("tooltip.redstonemanager.rm_linker.shift_right_click"));
+        tooltipComponent.add(Component.translatable("tooltip.redstonemanager.rm_linker.area_select"));
+
         if (itemStack.get(ModDataComponents.COORDINATES) != null) {
             BlockPos blockPos = itemStack.get(ModDataComponents.COORDINATES);
             assert blockPos != null;
             tooltipComponent.add(Component.translatable("tooltip.redstonemanager.rm_linker.linked_to", blockPos.toShortString()));
+        }
+
+        if (itemStack.get(ModDataComponents.COORDINATES_START) != null) {
+            BlockPos blockPos = itemStack.get(ModDataComponents.COORDINATES_START);
+            assert blockPos != null;
+            tooltipComponent.add(Component.translatable("tooltip.redstonemanager.rm_linker.area_start", blockPos.toShortString()));
+        }
+
+        if (itemStack.get(ModDataComponents.COORDINATES_END) != null) {
+            BlockPos blockPos = itemStack.get(ModDataComponents.COORDINATES_END);
+            assert blockPos != null;
+            tooltipComponent.add(Component.translatable("tooltip.redstonemanager.rm_linker.area_end", blockPos.toShortString()));
         }
 
         if (itemStack.get(ModDataComponents.DIMENSION) != null) {

@@ -438,4 +438,125 @@ public class RedstoneManagerBlockEntity extends BlockEntity implements MenuProvi
     public void handleUpdateTag(@NotNull CompoundTag tag, HolderLookup.@NotNull Provider registries) {
         loadAdditional(tag, registries);
     }
+
+    public void handleBulkLink(ItemStack linkerStack, ServerPlayer player) {
+        BlockPos start = linkerStack.get(ModDataComponents.COORDINATES_START);
+        BlockPos end = linkerStack.get(ModDataComponents.COORDINATES_END);
+        ResourceLocation dim = linkerStack.get(ModDataComponents.DIMENSION);
+
+        if (start != null && end != null && dim != null) {
+            bulkAddByRange(start, end, dim, player);
+        } else {
+            BlockPos linked = linkerStack.get(ModDataComponents.COORDINATES);
+            if (linked != null && dim != null) {
+                bulkAddBySimilarity(linked, dim, player);
+            }
+        }
+    }
+
+    private void bulkAddByRange(BlockPos start, BlockPos end, ResourceLocation dim, ServerPlayer player) {
+        ServerLevel targetLevel = resolveLevel(dim);
+        if (targetLevel == null) return;
+
+        BlockPos min = new BlockPos(Math.min(start.getX(), end.getX()), Math.min(start.getY(), end.getY()), Math.min(start.getZ(), end.getZ()));
+        BlockPos max = new BlockPos(Math.max(start.getX(), end.getX()), Math.max(start.getY(), end.getY()), Math.max(start.getZ(), end.getZ()));
+
+        int count = 0;
+        String groupName = getFirstOrNewGroup(player);
+
+        for (BlockPos p : BlockPos.betweenClosed(min, max)) {
+            BlockState state = targetLevel.getBlockState(p);
+            if (LinkerGroup.canLink(state)) {
+                if (isAlreadyLinked(p, dim)) continue;
+
+                ItemStack blankLinker = findBlankLinker(player);
+                if (!blankLinker.isEmpty()) {
+                    blankLinker.set(ModDataComponents.COORDINATES, p.immutable());
+                    blankLinker.set(ModDataComponents.DIMENSION, dim);
+                    addItemToGroup(groupName, blankLinker.copy());
+                    blankLinker.shrink(1);
+                    count++;
+                } else {
+                    player.sendSystemMessage(Component.translatable("message.redstonemanager.out_of_linkers", count));
+                    return;
+                }
+            }
+        }
+        player.sendSystemMessage(Component.translatable("message.redstonemanager.bulk_link_success", count, groupName));
+        setChanged();
+        if (level != null) {
+            level.sendBlockUpdated(getBlockPos(), getBlockState(), getBlockState(), 3);
+        }
+    }
+
+    private void bulkAddBySimilarity(BlockPos linked, ResourceLocation dim, ServerPlayer player) {
+        ServerLevel targetLevel = resolveLevel(dim);
+        if (targetLevel == null) return;
+
+        BlockState linkedState = targetLevel.getBlockState(linked);
+        int count = 0;
+        String groupName = getFirstOrNewGroup(player);
+
+        // Search in a configured radius
+        int radius = Config.BULK_SEARCH_RADIUS.get();
+        BlockPos min = linked.offset(-radius, -radius, -radius);
+        BlockPos max = linked.offset(radius, radius, radius);
+
+        for (BlockPos p : BlockPos.betweenClosed(min, max)) {
+            BlockState state = targetLevel.getBlockState(p);
+            if (state.getBlock() == linkedState.getBlock()) {
+                if (isAlreadyLinked(p, dim)) continue;
+
+                ItemStack blankLinker = findBlankLinker(player);
+                if (!blankLinker.isEmpty()) {
+                    blankLinker.set(ModDataComponents.COORDINATES, p.immutable());
+                    blankLinker.set(ModDataComponents.DIMENSION, dim);
+                    addItemToGroup(groupName, blankLinker.copy());
+                    blankLinker.shrink(1);
+                    count++;
+                } else {
+                    player.sendSystemMessage(Component.translatable("message.redstonemanager.out_of_linkers", count));
+                    return;
+                }
+            }
+        }
+        player.sendSystemMessage(Component.translatable("message.redstonemanager.bulk_link_success", count, groupName));
+        setChanged();
+        if (level != null) {
+            level.sendBlockUpdated(getBlockPos(), getBlockState(), getBlockState(), 3);
+        }
+    }
+
+    private String getFirstOrNewGroup(ServerPlayer player) {
+        if (items.isEmpty()) {
+            createGroup("Default", player);
+            return "Default";
+        }
+        return items.keySet().iterator().next();
+    }
+
+    private boolean isAlreadyLinked(BlockPos pos, ResourceLocation dim) {
+        for (LinkerGroup group : items.values()) {
+            for (ItemStack stack : group.getItems()) {
+                BlockPos p = stack.get(ModDataComponents.COORDINATES);
+                ResourceLocation d = stack.get(ModDataComponents.DIMENSION);
+                if (pos.equals(p) && Objects.equals(dim, d)) return true;
+            }
+        }
+        return false;
+    }
+
+    private ItemStack findBlankLinker(ServerPlayer player) {
+        for (int i = 0; i < player.getInventory().getContainerSize(); i++) {
+            ItemStack stack = player.getInventory().getItem(i);
+            if (stack.getItem() instanceof RedstoneLinkerItem) {
+                if (stack.get(ModDataComponents.COORDINATES) == null &&
+                        stack.get(ModDataComponents.COORDINATES_START) == null &&
+                        stack.get(ModDataComponents.COORDINATES_END) == null) {
+                    return stack;
+                }
+            }
+        }
+        return ItemStack.EMPTY;
+    }
 }
