@@ -6,6 +6,7 @@ import dev.igorilic.redstonemanager.component.ModDataComponents;
 import dev.igorilic.redstonemanager.item.ModCreativeModTabs;
 import dev.igorilic.redstonemanager.item.ModItemProperties;
 import dev.igorilic.redstonemanager.item.ModItems;
+import dev.igorilic.redstonemanager.item.custom.pouch.ui.PouchScreen;
 import dev.igorilic.redstonemanager.network.PacketHandler;
 import dev.igorilic.redstonemanager.screen.ModMenuTypes;
 import dev.igorilic.redstonemanager.screen.custom.ManagerScreen;
@@ -84,6 +85,7 @@ public class RedstoneManager {
         @SubscribeEvent
         public static void registerScreens(RegisterMenuScreensEvent event) {
             event.register(ModMenuTypes.MANAGER_MENU.get(), ManagerScreen::new);
+            event.register(ModMenuTypes.POUCH_MENU.get(), PouchScreen::new);
         }
     }
 }

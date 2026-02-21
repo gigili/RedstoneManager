@@ -11,7 +11,7 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.InteractionResult;
-import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
@@ -22,14 +22,13 @@ import net.minecraft.world.level.block.state.BlockState;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.List;
-import java.util.UUID;
 
 public class RedstoneLinkerItem extends Item {
     public RedstoneLinkerItem(Properties properties) {
         super(properties);
     }
 
-    @Override
+    /*@Override
     public void inventoryTick(@NotNull ItemStack stack, @NotNull Level level, @NotNull Entity entity, int slotId, boolean isSelected) {
         super.inventoryTick(stack, level, entity, slotId, isSelected);
         if (!level.isClientSide && entity instanceof Player && !stack.has(ModDataComponents.ITEM_UUID)) {
@@ -44,7 +43,7 @@ public class RedstoneLinkerItem extends Item {
             stack.set(ModDataComponents.ITEM_UUID, UUID.randomUUID().toString());
         }
         return super.getDefaultInstance();
-    }
+    }*/
 
     @Override
     public @NotNull InteractionResult useOn(UseOnContext context) {
@@ -60,10 +59,19 @@ public class RedstoneLinkerItem extends Item {
             if (player.isCrouching()) {
                 if (!level.isClientSide) {
                     if (level.getBlockEntity(pos) instanceof RedstoneManagerBlockEntity blockEntity) {
-                        blockEntity.handleBulkLink(stack, (ServerPlayer) player);
+                        boolean shouldConsume = blockEntity.handleBulkLink(stack, (ServerPlayer) player);
+                        if (shouldConsume) {
+                            context.getItemInHand().shrink(1);
+                            Inventory inv = player.getInventory();
+                            int index = inv.items.indexOf(context.getItemInHand());
+                            if (index != -1) {
+                                inv.setItem(index, ItemStack.EMPTY);
+                                //inv.getItem(index).shrink(1);
+                            }
+                        }
                     }
                 }
-                return InteractionResult.sidedSuccess(level.isClientSide);
+                return InteractionResult.SUCCESS;
             } else {
                 return InteractionResult.PASS;
             }

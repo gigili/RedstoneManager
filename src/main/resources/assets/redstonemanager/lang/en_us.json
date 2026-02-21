@@ -7,6 +7,7 @@
   "errors.redstonemanager.manager.no_block_entity": "No BlockEntity",
   "errors.redstonemanager.manager.not_linked": "Not Linked",
   "gui.redstonemanager.manager": "Redstone Manager",
+  "item.redstonemanager.pouch": "Linker pouch",
   "item.redstonemanager.rm_linker": "Linker",
   "label.redstonemanager.manager.cancel": "Cancel",
   "label.redstonemanager.manager.confirm": "Confirm",
@@ -35,8 +36,10 @@
   "tooltip.redstonemanager.rm_linker.area_select": "Right click two blocks to select an area, then Crouch+Right Click on Manager to bulk link.",
   "tooltip.redstonemanager.rm_linker.area_start": "Area Start: %s",
   "tooltip.redstonemanager.rm_linker.click_to_toggle_lever": "Click to toggle linked lever",
-  "tooltip.redstonemanager.rm_linker.linked_to": "Linked to: %s",
   "tooltip.redstonemanager.rm_linker.linked_in": "Linked in: %s",
+  "tooltip.redstonemanager.rm_linker.linked_to": "Linked to: %s",
   "tooltip.redstonemanager.rm_linker.right_click": "Right click a block to set area corners",
-  "tooltip.redstonemanager.rm_linker.shift_right_click": "Crouch + right click a block to link (or clear)"
+  "tooltip.redstonemanager.rm_linker.shift_right_click": "Crouch + right click a block to link (or clear)",
+  "gui.redstonemanager.pouch": "Pouch",
+  "tooltip.redstonemanager.pouch.store": "Store stacks of Linkers for easier bulk linking"
 }

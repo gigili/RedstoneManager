@@ -1,6 +1,7 @@
 package dev.igorilic.redstonemanager.data;
 
 import dev.igorilic.redstonemanager.RedstoneManager;
+import dev.igorilic.redstonemanager.item.ModItems;
 import net.minecraft.data.PackOutput;
 import net.minecraft.resources.ResourceLocation;
 import net.neoforged.neoforge.client.model.generators.ItemModelProvider;
@@ -14,7 +15,7 @@ public class ModItemModelProvider extends ItemModelProvider {
 
     @Override
     protected void registerModels() {
-        //basicItem(ModItems.RM_LINKER.get());
+        basicItem(ModItems.RM_POUCH.get());
 
         getBuilder("rm_manager")
                 .parent(getExistingFile(modLoc("item/redstone_manager")));
