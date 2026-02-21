@@ -50,11 +50,6 @@ public class RedstoneManagerBlock extends BaseEntityBlock {
     }
 
     @Override
-    public @NotNull BlockState mirror(BlockState state, Mirror mirror) {
-        return state.rotate(mirror.getRotation(state.getValue(FACING)));
-    }
-
-    @Override
     protected @NotNull VoxelShape getShape(@NotNull BlockState state, @NotNull BlockGetter level, @NotNull BlockPos pos, @NotNull CollisionContext context) {
         return SHAPE;
     }
@@ -84,6 +79,7 @@ public class RedstoneManagerBlock extends BaseEntityBlock {
         }
         super.onRemove(state, level, blockPos, newState, movedByPiston);
     }
+
 
     @Override
     public @NotNull InteractionResult useWithoutItem(@NotNull BlockState blockState, Level level, @NotNull BlockPos pos, @NotNull Player player, @NotNull BlockHitResult hit) {

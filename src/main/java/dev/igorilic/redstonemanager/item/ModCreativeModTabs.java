@@ -20,6 +20,7 @@ public class ModCreativeModTabs {
             .displayItems(((itemDisplayParameters, output) -> {
                 output.accept(ModItems.RM_LINKER);
                 output.accept(ModBlocks.RM_MANAGER_BLOCK);
+                output.accept(ModItems.RM_POUCH);
             }))
             .build());
 

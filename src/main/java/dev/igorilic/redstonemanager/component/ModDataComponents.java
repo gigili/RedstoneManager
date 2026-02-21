@@ -16,6 +16,8 @@ public class ModDataComponents {
     public static final DeferredRegister<DataComponentType<?>> DATA_COMPONENT_TYPES = DeferredRegister.createDataComponents(Registries.DATA_COMPONENT_TYPE, RedstoneManager.MOD_ID);
 
     public static final DeferredHolder<DataComponentType<?>, DataComponentType<BlockPos>> COORDINATES = register("coordinates", builder -> builder.persistent(BlockPos.CODEC));
+    public static final DeferredHolder<DataComponentType<?>, DataComponentType<BlockPos>> COORDINATES_START = register("coordinates_start", builder -> builder.persistent(BlockPos.CODEC));
+    public static final DeferredHolder<DataComponentType<?>, DataComponentType<BlockPos>> COORDINATES_END = register("coordinates_end", builder -> builder.persistent(BlockPos.CODEC));
     public static final DeferredHolder<DataComponentType<?>, DataComponentType<ResourceLocation>> DIMENSION = register("dimension", builder -> builder.persistent(ResourceLocation.CODEC));
     public static final DeferredHolder<DataComponentType<?>, DataComponentType<String>> ITEM_UUID = register("item_uuid", builder -> builder.persistent(Codec.STRING));
 
