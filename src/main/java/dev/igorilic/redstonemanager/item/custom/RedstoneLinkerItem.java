@@ -6,7 +6,7 @@ import dev.igorilic.redstonemanager.component.ModDataComponents;
 import dev.igorilic.redstonemanager.util.LinkerGroup;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
@@ -16,34 +16,18 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.TooltipFlag;
+import net.minecraft.world.item.component.TooltipDisplay;
 import net.minecraft.world.item.context.UseOnContext;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.BlockState;
 import org.jetbrains.annotations.NotNull;
 
-import java.util.List;
+import java.util.function.Consumer;
 
 public class RedstoneLinkerItem extends Item {
     public RedstoneLinkerItem(Properties properties) {
         super(properties);
     }
-
-    /*@Override
-    public void inventoryTick(@NotNull ItemStack stack, @NotNull Level level, @NotNull Entity entity, int slotId, boolean isSelected) {
-        super.inventoryTick(stack, level, entity, slotId, isSelected);
-        if (!level.isClientSide && entity instanceof Player && !stack.has(ModDataComponents.ITEM_UUID)) {
-            stack.set(ModDataComponents.ITEM_UUID, UUID.randomUUID().toString());
-        }
-    }
-
-    @Override
-    public @NotNull ItemStack getDefaultInstance() {
-        ItemStack stack = new ItemStack(this);
-        if (!stack.has(ModDataComponents.ITEM_UUID)) {
-            stack.set(ModDataComponents.ITEM_UUID, UUID.randomUUID().toString());
-        }
-        return super.getDefaultInstance();
-    }*/
 
     @Override
     public @NotNull InteractionResult useOn(UseOnContext context) {
@@ -57,16 +41,15 @@ public class RedstoneLinkerItem extends Item {
 
         if (state.is(ModBlocks.RM_MANAGER_BLOCK.get())) {
             if (player.isCrouching()) {
-                if (!level.isClientSide) {
+                if (!level.isClientSide()) {
                     if (level.getBlockEntity(pos) instanceof RedstoneManagerBlockEntity blockEntity) {
                         boolean shouldConsume = blockEntity.handleBulkLink(stack, (ServerPlayer) player);
                         if (shouldConsume) {
                             context.getItemInHand().shrink(1);
                             Inventory inv = player.getInventory();
-                            int index = inv.items.indexOf(context.getItemInHand());
+                            int index = inv.findSlotMatchingItem(context.getItemInHand());
                             if (index != -1) {
                                 inv.setItem(index, ItemStack.EMPTY);
-                                //inv.getItem(index).shrink(1);
                             }
                         }
                     }
@@ -77,11 +60,11 @@ public class RedstoneLinkerItem extends Item {
             }
         }
 
-        if (!level.isClientSide) {
+        if (!level.isClientSide()) {
             if (player.isCrouching()) {
                 if (LinkerGroup.canLink(state)) {
                     stack.set(ModDataComponents.COORDINATES, pos);
-                    stack.set(ModDataComponents.DIMENSION, level.dimension().location());
+                    stack.set(ModDataComponents.DIMENSION, level.dimension().identifier());
                     stack.set(ModDataComponents.COORDINATES_START, null);
                     stack.set(ModDataComponents.COORDINATES_END, null);
                     level.playSound(null, pos, SoundEvents.STONE_BUTTON_CLICK_ON, SoundSource.BLOCKS, 1.0F, 1.0F);
@@ -95,7 +78,7 @@ public class RedstoneLinkerItem extends Item {
             } else {
                 if (stack.get(ModDataComponents.COORDINATES_START) == null) {
                     stack.set(ModDataComponents.COORDINATES_START, pos);
-                    stack.set(ModDataComponents.DIMENSION, level.dimension().location());
+                    stack.set(ModDataComponents.DIMENSION, level.dimension().identifier());
                     stack.set(ModDataComponents.COORDINATES, null); // Clear direct link
                     player.sendSystemMessage(Component.translatable("message.redstonemanager.area_start_set", pos.toShortString()));
                 } else if (stack.get(ModDataComponents.COORDINATES_END) == null) {
@@ -112,38 +95,38 @@ public class RedstoneLinkerItem extends Item {
             player.getInventory().setChanged();
         }
 
-        return InteractionResult.sidedSuccess(level.isClientSide);
+        return InteractionResult.SUCCESS_SERVER;
     }
 
     @Override
-    public void appendHoverText(@NotNull ItemStack itemStack, @NotNull TooltipContext context, List<Component> tooltipComponent, @NotNull TooltipFlag tooltipFlag) {
-        tooltipComponent.add(Component.translatable("tooltip.redstonemanager.rm_linker.right_click"));
-        tooltipComponent.add(Component.translatable("tooltip.redstonemanager.rm_linker.shift_right_click"));
-        tooltipComponent.add(Component.translatable("tooltip.redstonemanager.rm_linker.area_select"));
+    public void appendHoverText(@NotNull ItemStack itemStack, @NotNull TooltipContext context, @NotNull TooltipDisplay tooltipDisplay, @NotNull Consumer<Component> tooltipConsumer, @NotNull TooltipFlag tooltipFlag) {
+        tooltipConsumer.accept(Component.translatable("tooltip.redstonemanager.rm_linker.right_click"));
+        tooltipConsumer.accept(Component.translatable("tooltip.redstonemanager.rm_linker.shift_right_click"));
+        tooltipConsumer.accept(Component.translatable("tooltip.redstonemanager.rm_linker.area_select"));
 
         if (itemStack.get(ModDataComponents.COORDINATES) != null) {
             BlockPos blockPos = itemStack.get(ModDataComponents.COORDINATES);
             assert blockPos != null;
-            tooltipComponent.add(Component.translatable("tooltip.redstonemanager.rm_linker.linked_to", blockPos.toShortString()));
+            tooltipConsumer.accept(Component.translatable("tooltip.redstonemanager.rm_linker.linked_to", blockPos.toShortString()));
         }
 
         if (itemStack.get(ModDataComponents.COORDINATES_START) != null) {
             BlockPos blockPos = itemStack.get(ModDataComponents.COORDINATES_START);
             assert blockPos != null;
-            tooltipComponent.add(Component.translatable("tooltip.redstonemanager.rm_linker.area_start", blockPos.toShortString()));
+            tooltipConsumer.accept(Component.translatable("tooltip.redstonemanager.rm_linker.area_start", blockPos.toShortString()));
         }
 
         if (itemStack.get(ModDataComponents.COORDINATES_END) != null) {
             BlockPos blockPos = itemStack.get(ModDataComponents.COORDINATES_END);
             assert blockPos != null;
-            tooltipComponent.add(Component.translatable("tooltip.redstonemanager.rm_linker.area_end", blockPos.toShortString()));
+            tooltipConsumer.accept(Component.translatable("tooltip.redstonemanager.rm_linker.area_end", blockPos.toShortString()));
         }
 
         if (itemStack.get(ModDataComponents.DIMENSION) != null) {
-            ResourceLocation dimension = itemStack.get(ModDataComponents.DIMENSION);
+            Identifier dimension = itemStack.get(ModDataComponents.DIMENSION);
             assert dimension != null;
-            tooltipComponent.add(Component.translatable("tooltip.redstonemanager.rm_linker.linked_in", dimension.toString()));
+            tooltipConsumer.accept(Component.translatable("tooltip.redstonemanager.rm_linker.linked_in", dimension.toString()));
         }
-        super.appendHoverText(itemStack, context, tooltipComponent, tooltipFlag);
+        super.appendHoverText(itemStack, context, tooltipDisplay, tooltipConsumer, tooltipFlag);
     }
 }

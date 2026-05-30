@@ -1,12 +1,13 @@
 package dev.igorilic.redstonemanager.screen.custom;
 
-import com.mojang.blaze3d.vertex.PoseStack;
+
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.StringWidget;
 import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.network.chat.Component;
 
 import java.util.function.Consumer;
@@ -58,21 +59,7 @@ public class ConfirmActionScreen extends Screen {
         int centerY = height / 2;
 
         confirmText.plainCopy().withStyle(ChatFormatting.BOLD);
-        StringWidget wgtConfirmText = new StringWidget(confirmText, font) {
-            @Override
-            public void renderWidget(GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
-                float scale = 1.5f; // Set desired scale
-                PoseStack poseStack = guiGraphics.pose();
-                poseStack.pushPose();
-                poseStack.translate(this.getX(), this.getY(), 0);
-                poseStack.scale(scale, scale, 1f);
-
-                // Offset X/Y because scaling doesn't affect widget bounds
-                guiGraphics.drawString(font, this.getMessage(), 0, 0, this.getColor(), true);
-
-                poseStack.popPose();
-            }
-        };
+        StringWidget wgtConfirmText = new StringWidget(confirmText, font);
         wgtConfirmText.setX(centerX - (int) (font.width(confirmText) / 1.5) + 5);
         wgtConfirmText.setY(centerY - (hasDescription ? 30 : 15));
         this.addRenderableWidget(wgtConfirmText);
@@ -104,7 +91,7 @@ public class ConfirmActionScreen extends Screen {
     }
 
     @Override
-    public void render(GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
+    public void extractRenderState(GuiGraphicsExtractor guiGraphics, int screenX, int screenY, float partialTick) {
         int padding = 16;
         int spacingBetweenLines = 6;
         float titleScale = 1.5f;
@@ -134,10 +121,10 @@ public class ConfirmActionScreen extends Screen {
         int y2 = centerY + totalBoxHeight / 2;
 
         // Draw semi-transparent background
-        guiGraphics.fill(x1, y1, x2 + 45, y2, 0xDD222222); // ~87% opaque dark gray
+        guiGraphics.fill(RenderPipelines.GUI, x1, y1, x2 + 45, y2, 0xDD222222); // ~87% opaque dark gray
 
         // Render everything else
-        super.render(guiGraphics, mouseX, mouseY, partialTick);
+        super.extractRenderState(guiGraphics, screenX, screenY, partialTick);
     }
 
 

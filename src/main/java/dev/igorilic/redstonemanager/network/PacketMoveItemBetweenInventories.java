@@ -10,7 +10,7 @@ import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.item.ItemStack;
 import net.neoforged.neoforge.network.handling.IPayloadHandler;
@@ -23,7 +23,7 @@ public record PacketMoveItemBetweenInventories(ItemStack itemStack, CompoundTag 
         this(itemStack, new CompoundTag(), clickType, button, managerPos, groupName);
     }
 
-    public static final CustomPacketPayload.Type<PacketMoveItemBetweenInventories> TYPE = new CustomPacketPayload.Type<>(ResourceLocation.fromNamespaceAndPath(RedstoneManager.MOD_ID, "interact_menu"));
+    public static final CustomPacketPayload.Type<PacketMoveItemBetweenInventories> TYPE = new CustomPacketPayload.Type<>(Identifier.fromNamespaceAndPath(RedstoneManager.MOD_ID, "interact_menu"));
 
 
     public static final IPayloadHandler<PacketMoveItemBetweenInventories> HANDLER = (pkt, ctx) -> {

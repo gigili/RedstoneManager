@@ -9,7 +9,6 @@ import net.minecraft.world.level.storage.loot.parameters.LootContextParamSets;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.common.data.BlockTagsProvider;
-import net.neoforged.neoforge.common.data.ExistingFileHelper;
 import net.neoforged.neoforge.data.event.GatherDataEvent;
 
 import java.util.Collections;
@@ -20,14 +19,13 @@ import java.util.concurrent.CompletableFuture;
 public class DataGenerators {
 
     @SubscribeEvent
-    public static void gatherData(GatherDataEvent event) {
+    public static void gatherData(GatherDataEvent.Client event) {
         DataGenerator generator = event.getGenerator();
         PackOutput packOutput = generator.getPackOutput();
-        ExistingFileHelper existingFileHelper = event.getExistingFileHelper();
         CompletableFuture<HolderLookup.Provider> lookupProvider = event.getLookupProvider();
 
         generator.addProvider(
-                event.includeServer(),
+                true,
                 new LootTableProvider(
                         packOutput,
                         Collections.emptySet(),
@@ -36,16 +34,12 @@ public class DataGenerators {
                 )
         );
 
-        generator.addProvider(event.includeServer(), new ModRecipeProvider(packOutput,lookupProvider));
-        generator.addProvider(event.includeServer(), new ModDataMapProvider(packOutput, lookupProvider));
+        generator.addProvider(true, new ModModelProvider(packOutput));
 
-        BlockTagsProvider blockTagsProvider = new ModBlockTagProvider(packOutput, lookupProvider, existingFileHelper);
-        generator.addProvider(event.includeServer(), blockTagsProvider);
-        generator.addProvider(event.includeServer(), new ModItemTagProvider(packOutput, lookupProvider, blockTagsProvider.contentsGetter(), existingFileHelper));
+        generator.addProvider(true, new ModDataMapProvider(packOutput, lookupProvider));
 
-        generator.addProvider(event.includeClient(), new ModItemModelProvider(packOutput, existingFileHelper));
-        generator.addProvider(event.includeClient(), new ModBlockStateProvider(packOutput, existingFileHelper));
-
-
+        BlockTagsProvider blockTagsProvider = new ModBlockTagProvider(packOutput, lookupProvider);
+        generator.addProvider(true, blockTagsProvider);
+        generator.addProvider(true, new ModItemTagProvider(packOutput, lookupProvider, blockTagsProvider.contentsGetter()));
     }
 }

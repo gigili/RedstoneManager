@@ -1,9 +1,11 @@
 package dev.igorilic.redstonemanager.screen.custom;
 
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.client.input.MouseButtonEvent;
+import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.network.chat.Component;
 import net.minecraft.util.Mth;
 import org.jetbrains.annotations.NotNull;
@@ -48,7 +50,9 @@ public class ColorPickerScreen extends Screen {
     }
 
     @Override
-    public boolean mouseClicked(double mouseX, double mouseY, int button) {
+    public boolean mouseClicked(MouseButtonEvent event, boolean isInside) {
+        double mouseX = event.x();
+        double mouseY = event.y();
         if (inHueBar(mouseX, mouseY)) {
             draggingHue = true;
             updateHue(mouseX);
@@ -58,7 +62,7 @@ public class ColorPickerScreen extends Screen {
             updateSB(mouseX, mouseY);
             return true;
         }
-        return super.mouseClicked(mouseX, mouseY, button);
+        return super.mouseClicked(event, isInside);
     }
 
     private void updateColor() {
@@ -67,33 +71,32 @@ public class ColorPickerScreen extends Screen {
     }
 
     @Override
-    public void render(@NotNull GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
-        renderBackground(guiGraphics, mouseX, mouseY, partialTick);
-        super.render(guiGraphics, mouseX, mouseY, partialTick);
+    public void extractRenderState(@NotNull GuiGraphicsExtractor guiGraphics, int screenX, int screenY, float partialTick) {
+        super.extractRenderState(guiGraphics, screenX, screenY, partialTick);
 
         drawHueBar(guiGraphics);
         drawSaturationBrightnessSquare(guiGraphics);
         drawColorPreview(guiGraphics);
     }
 
-    private void drawHueBar(GuiGraphics guiGraphics) {
+    private void drawHueBar(GuiGraphicsExtractor guiGraphics) {
         for (int x = 0; x < hueWidth; x++) {
             float h = (float) x / hueWidth;
             int color = Color.HSBtoRGB(h, 1f, 1f);
-            guiGraphics.fill(hueX + x, hueY, hueX + x + 1, hueY + hueHeight, 0xFF000000 | color);
+            guiGraphics.fill(RenderPipelines.GUI, hueX + x, hueY, hueX + x + 1, hueY + hueHeight, 0xFF000000 | color);
         }
 
         int hx = (int) (hue * hueWidth);
-        guiGraphics.fill(hueX + hx - 1, hueY - 2, hueX + hx + 2, hueY + hueHeight + 2, 0xFFFFFFFF);
+        guiGraphics.fill(RenderPipelines.GUI, hueX + hx - 1, hueY - 2, hueX + hx + 2, hueY + hueHeight + 2, 0xFFFFFFFF);
     }
 
-    private void drawSaturationBrightnessSquare(GuiGraphics guiGraphics) {
+    private void drawSaturationBrightnessSquare(GuiGraphicsExtractor guiGraphics) {
         for (int y = 0; y < sbSize; y++) {
             for (int x = 0; x < sbSize; x++) {
                 float s = (float) x / sbSize;
                 float b = 1f - (float) y / sbSize;
                 int color = Color.HSBtoRGB(hue, s, b);
-                guiGraphics.fill(sbX + x, sbY + y, sbX + x + 1, sbY + y + 1, 0xFF000000 | color);
+                guiGraphics.fill(RenderPipelines.GUI, sbX + x, sbY + y, sbX + x + 1, sbY + y + 1, 0xFF000000 | color);
             }
         }
 
@@ -103,15 +106,15 @@ public class ColorPickerScreen extends Screen {
         int px = sbX + cx;
         int py = sbY + cy;
 
-        guiGraphics.fill(px - 1, py - 5, px + 2, py + 6, 0xFF000000); // vertical bar
-        guiGraphics.fill(px - 5, py - 1, px + 6, py + 2, 0xFF000000); // horizontal bar
+        guiGraphics.fill(RenderPipelines.GUI, px - 1, py - 5, px + 2, py + 6, 0xFF000000); // vertical bar
+        guiGraphics.fill(RenderPipelines.GUI, px - 5, py - 1, px + 6, py + 2, 0xFF000000); // horizontal bar
     }
 
-    private void drawColorPreview(GuiGraphics guiGraphics) {
+    private void drawColorPreview(GuiGraphicsExtractor guiGraphics) {
         int previewX = width / 2 + 80;
         int previewY = sbY;
-        guiGraphics.fill(previewX, previewY, previewX + 40, previewY + 40, 0xFF000000 | selectedColor);
-        guiGraphics.drawString(font, "#" + Integer.toHexString(selectedColor).toUpperCase(), previewX, previewY + 45, 0xFFFFFF);
+        guiGraphics.fill(RenderPipelines.GUI, previewX, previewY, previewX + 40, previewY + 40, 0xFF000000 | selectedColor);
+        guiGraphics.text(font, "#" + Integer.toHexString(selectedColor).toUpperCase(), previewX, previewY + 45, 0xFFFFFF);
     }
 
     @Override
@@ -120,14 +123,16 @@ public class ColorPickerScreen extends Screen {
     }
 
     @Override
-    public boolean mouseReleased(double mouseX, double mouseY, int button) {
+    public boolean mouseReleased(MouseButtonEvent event) {
         draggingHue = false;
         draggingSB = false;
-        return super.mouseReleased(mouseX, mouseY, button);
+        return super.mouseReleased(event);
     }
 
     @Override
-    public boolean mouseDragged(double mouseX, double mouseY, int button, double dx, double dy) {
+    public boolean mouseDragged(MouseButtonEvent event, double dragX, double dragY) {
+        double mouseX = event.x();
+        double mouseY = event.y();
         if (draggingHue) {
             updateHue(mouseX);
             return true;
@@ -135,7 +140,7 @@ public class ColorPickerScreen extends Screen {
             updateSB(mouseX, mouseY);
             return true;
         }
-        return super.mouseDragged(mouseX, mouseY, button, dx, dy);
+        return super.mouseDragged(event, dragX, dragY);
     }
 
     private boolean inHueBar(double x, double y) {

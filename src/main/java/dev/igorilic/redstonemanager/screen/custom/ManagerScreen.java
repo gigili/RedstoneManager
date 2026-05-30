@@ -1,7 +1,6 @@
 package dev.igorilic.redstonemanager.screen.custom;
 
 import com.mojang.blaze3d.platform.InputConstants;
-import com.mojang.blaze3d.systems.RenderSystem;
 import dev.igorilic.redstonemanager.RedstoneManager;
 import dev.igorilic.redstonemanager.block.entity.RedstoneManagerBlockEntity;
 import dev.igorilic.redstonemanager.component.ModDataComponents;
@@ -14,21 +13,23 @@ import dev.igorilic.redstonemanager.util.entries.ItemEntry;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
+import net.minecraft.client.input.KeyEvent;
+import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.client.player.LocalPlayer;
-import net.minecraft.client.renderer.GameRenderer;
+import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Holder;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.item.ItemStack;
 import org.jetbrains.annotations.NotNull;
-import org.lwjgl.glfw.GLFW;
+import org.jspecify.annotations.NonNull;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -36,12 +37,12 @@ import java.util.Map;
 import java.util.Optional;
 
 public class ManagerScreen extends AbstractContainerScreen<ManagerMenu> implements IUpdatable {
-    private static final ResourceLocation GUI_TEXTURE = ResourceLocation.fromNamespaceAndPath(RedstoneManager.MOD_ID, "textures/gui/gui_no_slots_large.png");
-    private static final ResourceLocation GUI_NO_SCROLL_TEXTURE = ResourceLocation.fromNamespaceAndPath(RedstoneManager.MOD_ID, "textures/gui/gui_no_slots_no_scroll_large.png");
-    private static final ResourceLocation GUI_SCROLL_TEXTURE = ResourceLocation.fromNamespaceAndPath(RedstoneManager.MOD_ID, "textures/gui/gui_scroll.png");
-    private static final ResourceLocation GUI_ROW_TEXTURE = ResourceLocation.fromNamespaceAndPath(RedstoneManager.MOD_ID, "textures/gui/gui_row.png");
-    private static final ResourceLocation GUI_TOGGLE_BUTTONS = ResourceLocation.fromNamespaceAndPath(RedstoneManager.MOD_ID, "textures/gui/gui_toggle_buttons.png");
-    private static final ResourceLocation GUI_BUTTONS = ResourceLocation.fromNamespaceAndPath(RedstoneManager.MOD_ID, "textures/gui/gui_buttons.png");
+    private static final Identifier GUI_TEXTURE = Identifier.fromNamespaceAndPath(RedstoneManager.MOD_ID, "textures/gui/gui_no_slots_large.png");
+    private static final Identifier GUI_NO_SCROLL_TEXTURE = Identifier.fromNamespaceAndPath(RedstoneManager.MOD_ID, "textures/gui/gui_no_slots_no_scroll_large.png");
+    private static final Identifier GUI_SCROLL_TEXTURE = Identifier.fromNamespaceAndPath(RedstoneManager.MOD_ID, "textures/gui/gui_scroll.png");
+    private static final Identifier GUI_ROW_TEXTURE = Identifier.fromNamespaceAndPath(RedstoneManager.MOD_ID, "textures/gui/gui_row.png");
+    private static final Identifier GUI_TOGGLE_BUTTONS = Identifier.fromNamespaceAndPath(RedstoneManager.MOD_ID, "textures/gui/gui_toggle_buttons.png");
+    private static final Identifier GUI_BUTTONS = Identifier.fromNamespaceAndPath(RedstoneManager.MOD_ID, "textures/gui/gui_buttons.png");
 
     private static final int SCROLLBAR_WIDTH = 12;
     private static final int SCROLLBAR_X_OFFSET = 174; // adjust to fit GUI width
@@ -93,12 +94,10 @@ public class ManagerScreen extends AbstractContainerScreen<ManagerMenu> implemen
     }
 
     public ManagerScreen(ManagerMenu menu, Inventory playerInventory, Component title) {
-        super(menu, playerInventory, title);
+        super(menu, playerInventory, title, 193, 243);
         MousePositionManagerUtil.setLastKnownPosition();
         this.blockEntity = menu.blockEntity;
         this.items = this.blockEntity.getItems();
-        this.imageHeight = 243;
-        this.imageWidth = 193;
         this.inventoryLabelY = this.imageHeight - 93;
         this.titleLabelY = this.titleLabelY - 2;
         regenerateFlattenedEntries();
@@ -122,45 +121,40 @@ public class ManagerScreen extends AbstractContainerScreen<ManagerMenu> implemen
     @Override
     protected void containerTick() {
         super.containerTick();
+        this.items = this.blockEntity.getItems();
+        regenerateFlattenedEntries();
     }
 
-    @Override
-    protected void renderBg(@NotNull GuiGraphics guiGraphics, float partialTick, int mouseX, int mouseY) {
-        RenderSystem.setShader(GameRenderer::getPositionTexShader);
-        RenderSystem.setShaderColor(1.0F, 1.0F, 1.0F, 1.0F);
-        RenderSystem.setShaderTexture(0, GUI_TEXTURE);
-
+    protected void drawCustomBg(@NotNull GuiGraphicsExtractor guiGraphics, int screenX, int screenY, float partialTick) {
         int baseX = (width - imageWidth) / 2;
         int baseY = (height - imageHeight) / 2;
 
         if (canScroll()) {
-            guiGraphics.blit(GUI_TEXTURE, baseX, baseY, 0, 0, imageWidth, imageHeight, 256, 256);
+            guiGraphics.blit(RenderPipelines.GUI_TEXTURED, GUI_TEXTURE, baseX, baseY, 0, 0, imageWidth, imageHeight, 256, 256);
             drawScrollbar(guiGraphics);
         } else {
             scrollIndex = 0;
-            guiGraphics.blit(GUI_NO_SCROLL_TEXTURE, baseX, baseY, 0, 0, imageWidth, imageHeight, 256, 256);
+            guiGraphics.blit(RenderPipelines.GUI_TEXTURED, GUI_NO_SCROLL_TEXTURE, baseX, baseY, 0, 0, imageWidth, imageHeight, 256, 256);
         }
     }
 
     @Override
-    public void render(@NotNull GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
-        super.render(guiGraphics, mouseX, mouseY, partialTick);
-        this.renderTooltip(guiGraphics, mouseX, mouseY);
-
+    public void extractRenderState(@NotNull GuiGraphicsExtractor guiGraphics, int screenX, int screenY, float partialTick) {
+        drawCustomBg(guiGraphics, screenX, screenY, partialTick);
+        super.extractRenderState(guiGraphics, screenX, screenY, partialTick);
         //guiGraphics.enableScissor(leftPos + 7, topPos + 17, leftPos + 7 + 162, topPos + 17 + (18 * visibleRows));
-        renderItems(guiGraphics, mouseX, mouseY, partialTick);
+        renderItems(guiGraphics, screenX, screenY, partialTick);
         //guiGraphics.disableScissor();
-        renderTooltip(guiGraphics, mouseX, mouseY);
 
         int newButtonX = leftPos + imageWidth - 36;
         int newButtonY = topPos + 3;
-        guiGraphics.blit(GUI_BUTTONS, newButtonX, newButtonY, 0, 0, 11, 11, 33, 11);
-        if (mouseX >= newButtonX && mouseX < newButtonX + 11 && mouseY >= newButtonY && mouseY < newButtonY + 11) {
-            guiGraphics.renderTooltip(font, Component.translatable("tooltip.redstonemanager.manager.create_group"), mouseX, mouseY);
+        guiGraphics.blit(RenderPipelines.GUI_TEXTURED, GUI_BUTTONS, newButtonX, newButtonY, 0, 0, 11, 11, 33, 11);
+        if (screenX >= newButtonX && screenX < newButtonX + 11 && screenY >= newButtonY && screenY < newButtonY + 11) {
+            guiGraphics.text(font, Component.translatable("tooltip.redstonemanager.manager.create_group"), screenX, screenY, 0xFFFFFFFF);
         }
     }
 
-    private void drawScrollbar(GuiGraphics guiGraphics) {
+    private void drawScrollbar(GuiGraphicsExtractor guiGraphics) {
         int scrollbarX = leftPos + SCROLLBAR_X_OFFSET;
         int scrollbarY = topPos + SCROLLBAR_Y_OFFSET;
         int handleHeight = 15;
@@ -169,10 +163,10 @@ public class ManagerScreen extends AbstractContainerScreen<ManagerMenu> implemen
         float scrollFraction = scrollIndex / (maxScroll * COLUMNS); // use total index range
         int handleY = Math.max(scrollbarY + (int) ((getScrollbarHeight() - handleHeight) * scrollFraction), scrollbarY);
 
-        guiGraphics.blit(GUI_SCROLL_TEXTURE, scrollbarX, handleY, 168, 0, 12, 15, 12, 15);
+        guiGraphics.blit(RenderPipelines.GUI_TEXTURED, GUI_SCROLL_TEXTURE, scrollbarX, handleY, 168, 0, 12, 15, 12, 15);
     }
 
-    private void renderItems(@NotNull GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
+    private void renderItems(@NotNull GuiGraphicsExtractor guiGraphics, int screenX, int screenY, float partialTick) {
         int startX = leftPos + 7;
         int rowY = topPos + 19;
 
@@ -226,24 +220,24 @@ public class ManagerScreen extends AbstractContainerScreen<ManagerMenu> implemen
                     int scissorH = (int) (font.lineHeight * scale);
 
                     // Enable scissor with correct coords
-                    RenderSystem.enableScissor(scissorX, scissorY, scissorW, scissorH);
+                    guiGraphics.enableScissor(scissorX, scissorY, scissorW, scissorH);
 
                     String visible1 = getVisibleSubstring(font, groupName, pixelOffset, maxVisibleWidth);
-                    guiGraphics.drawString(font, visible1, baseX, baseY, 0x80FFE6, false);
+                    guiGraphics.text(font, visible1, baseX, baseY, 0xFF80FFE6, false);
 
                     int secondX = baseX + fullTextWidth + loopGap - pixelOffset;
                     if (secondX < baseX + maxVisibleWidth) {
                         String visible2 = getVisibleSubstring(font, groupName, 0, maxVisibleWidth);
-                        guiGraphics.drawString(font, visible2, secondX, baseY, 0x80FFE6, false);
+                        guiGraphics.text(font, visible2, secondX, baseY, 0xFF80FFE6, false);
                     }
 
-                    RenderSystem.disableScissor();
+                    guiGraphics.disableScissor();
                 } else {
-                    guiGraphics.drawString(font, groupName, startX + 3, rowY + 5, 0x80FFE6, false);
+                    guiGraphics.text(font, groupName, startX + 3, rowY + 5, 0xFF80FFE6, false);
                 }
 
-                renderToggleButtons(guiGraphics, startX + 3, rowY + 4, groupName, mouseX, mouseY, partialTick);
-                renderGroupActionButtons(guiGraphics, startX + 3, rowY + 3, groupName, mouseX, mouseY);
+                renderToggleButtons(guiGraphics, startX + 3, rowY + 4, groupName, screenX, screenY, partialTick);
+                renderGroupActionButtons(guiGraphics, startX + 3, rowY + 3, groupName, screenX, screenY);
 
                 rowY += 18;
                 renderedRows++;
@@ -261,17 +255,16 @@ public class ManagerScreen extends AbstractContainerScreen<ManagerMenu> implemen
                     int x = startX + col * 18;
 
                     if (col == 0) {
-                        RenderSystem.setShaderTexture(0, GUI_ROW_TEXTURE);
-                        guiGraphics.blit(GUI_ROW_TEXTURE, startX, rowY - 2, 0, 0, 162, 18, 162, 18);
+                        guiGraphics.blit(RenderPipelines.GUI_TEXTURED, GUI_ROW_TEXTURE, startX, rowY - 2, 0, 0, 162, 18, 162, 18);
                     }
 
                     if (stack.getItem() instanceof RedstoneLinkerItem) {
-                        guiGraphics.renderItem(stack, x + 1, rowY - 1);
+                        guiGraphics.item(stack, x + 1, rowY - 1, 0);
                         renderLinkerItemBackground(group, stack, guiGraphics, x + 1, rowY - 1);
 
-                        if (mouseX >= x && mouseX < x + 16 && mouseY >= rowY - 1 && mouseY < rowY - 1 + 16) {
+                        if (screenX >= x && screenX < x + 16 && screenY >= rowY - 1 && screenY < rowY - 1 + 16) {
                             BlockPos leverPos = stack.get(ModDataComponents.COORDINATES);
-                            ResourceLocation leverDimension = stack.get(ModDataComponents.DIMENSION);
+                            Identifier leverDimension = stack.get(ModDataComponents.DIMENSION);
                             if (leverPos != null) {
                                 LeverStateCache.requestIfNeeded(leverPos, Optional.ofNullable(leverDimension));
 
@@ -284,14 +277,12 @@ public class ManagerScreen extends AbstractContainerScreen<ManagerMenu> implemen
                                                 ? Component.translatable("tooltip.redstonemanager.manager.turn_off")
                                                 : Component.translatable("tooltip.redstonemanager.manager.turn_on");
                                     }
-                                    guiGraphics.renderTooltip(font, extraLabel, mouseX, mouseY - 12);
+                                    guiGraphics.text(font, extraLabel, screenX, screenY - 12, 0xFFFFFFFF);
                                 }, () -> {
                                     Component extraLabel = Component.translatable("tooltip.redstonemanager.manager.loading");
-                                    guiGraphics.renderTooltip(font, extraLabel, mouseX, mouseY - 12);
+                                    guiGraphics.text(font, extraLabel, screenX, screenY - 12, 0xFFFFFFFF);
                                 });
                             }
-
-                            guiGraphics.renderTooltip(font, stack, mouseX, mouseY);
                         }
                     }
 
@@ -327,50 +318,50 @@ public class ManagerScreen extends AbstractContainerScreen<ManagerMenu> implemen
         return font.plainSubstrByWidth(trimmed, maxWidth);
     }
 
-    private void renderToggleButtons(@NotNull GuiGraphics guiGraphics, int startX, int startY, String groupName, int mouseX, int mouseY, float partialTick) {
+    private void renderToggleButtons(@NotNull GuiGraphicsExtractor guiGraphics, int startX, int startY, String groupName, int screenX, int screenY, float partialTick) {
         LinkerGroup linker = items.get(groupName);
         if (linker == null) return;
 
         boolean allOn = linker.isPowered();
 
         if (allOn) {
-            guiGraphics.blit(GUI_TOGGLE_BUTTONS, startX + 136, startY - 1, 0, 0, 20, 11, 41, 11);
+            guiGraphics.blit(RenderPipelines.GUI_TEXTURED, GUI_TOGGLE_BUTTONS, startX + 136, startY - 1, 0, 0, 20, 11, 41, 11);
         } else {
-            guiGraphics.blit(GUI_TOGGLE_BUTTONS, startX + 136, startY - 1, 19.5f, 0, 21, 11, 41, 11);
+            guiGraphics.blit(RenderPipelines.GUI_TEXTURED, GUI_TOGGLE_BUTTONS, startX + 136, startY - 1, 19.5f, 0, 21, 11, 41, 11);
         }
 
         int toggleX = startX + 139;
         int toggleY = startY + 2;
-        if (mouseX >= toggleX && mouseX < toggleX + 20 && mouseY >= toggleY && mouseY < toggleY + 11) {
+        if (screenX >= toggleX && screenX < toggleX + 20 && screenY >= toggleY && screenY < toggleY + 11) {
             Component toggleTooltip;
             if (items.get(groupName).isPowered()) {
                 toggleTooltip = Component.translatable("tooltip.redstonemanager.manager.toggle_group_off", groupName);
             } else {
                 toggleTooltip = Component.translatable("tooltip.redstonemanager.manager.toggle_group_on", groupName);
             }
-            guiGraphics.renderTooltip(font, toggleTooltip, mouseX, mouseY);
+            guiGraphics.text(font, toggleTooltip, screenX, screenY, 0xFFFFFFFF);
         }
     }
 
-    private void renderGroupActionButtons(@NotNull GuiGraphics guiGraphics, int startX, int rowY, String groupName, int mouseX, int mouseY) {
+    private void renderGroupActionButtons(@NotNull GuiGraphicsExtractor guiGraphics, int startX, int rowY, String groupName, int screenX, int screenY) {
         // Edit button
-        guiGraphics.blit(GUI_BUTTONS, startX + 70, rowY, 11, 0, 11, 11, 33, 11);
+        guiGraphics.blit(RenderPipelines.GUI_TEXTURED, GUI_BUTTONS, startX + 70, rowY, 11, 0, 11, 11, 33, 11);
 
-        if (mouseX >= startX + 70 && mouseX < startX + 81 && mouseY >= rowY && mouseY < rowY + 11) {
-            guiGraphics.renderTooltip(font, Component.translatable("tooltip.redstonemanager.manager.rename_group", groupName), startX + 70, rowY + 2);
+        if (screenX >= startX + 70 && screenX < startX + 81 && screenY >= rowY && screenY < rowY + 11) {
+            guiGraphics.text(font, Component.translatable("tooltip.redstonemanager.manager.rename_group", groupName), startX + 70, rowY + 2, 0xFFFFFFFF);
         }
 
         // Delete button
-        guiGraphics.blit(GUI_BUTTONS, startX + 70 + 11 + 4, rowY, 22, 0, 11, 11, 33, 11);
+        guiGraphics.blit(RenderPipelines.GUI_TEXTURED, GUI_BUTTONS, startX + 70 + 11 + 4, rowY, 22, 0, 11, 11, 33, 11);
 
-        if (mouseX >= startX + 70 + 11 + 4 && mouseX < startX + 70 + 11 + 4 + 11 && mouseY >= rowY && mouseY < rowY + 11) {
-            guiGraphics.renderTooltip(font, Component.translatable("tooltip.redstonemanager.manager.delete_group", groupName), startX + 70, rowY + 2);
+        if (screenX >= startX + 70 + 11 + 4 && screenX < startX + 70 + 11 + 4 + 11 && screenY >= rowY && screenY < rowY + 11) {
+            guiGraphics.text(font, Component.translatable("tooltip.redstonemanager.manager.delete_group", groupName), startX + 70, rowY + 2, 0xFFFFFFFF);
         }
     }
 
-    private void renderLinkerItemBackground(String group, ItemStack linkerItem, GuiGraphics guiGraphics, int slotX, int slotY) {
+    private void renderLinkerItemBackground(String group, ItemStack linkerItem, GuiGraphicsExtractor guiGraphics, int slotX, int slotY) {
         BlockPos leverPos = linkerItem.get(ModDataComponents.COORDINATES);
-        ResourceLocation leverDimension = linkerItem.get(ModDataComponents.DIMENSION);
+        Identifier leverDimension = linkerItem.get(ModDataComponents.DIMENSION);
         int slotSize = 16;
 
         int color;
@@ -383,7 +374,7 @@ public class ManagerScreen extends AbstractContainerScreen<ManagerMenu> implemen
             color = 0x77000000; // black = not linked
         }
 
-        guiGraphics.fill(slotX, slotY, slotX + slotSize, slotY + slotSize, color);
+        guiGraphics.fill(RenderPipelines.GUI, slotX, slotY, slotX + slotSize, slotY + slotSize, color);
     }
 
     private int getScrollbarHeight() {
@@ -402,8 +393,8 @@ public class ManagerScreen extends AbstractContainerScreen<ManagerMenu> implemen
     }
 
     private boolean isShiftDown() {
-        return InputConstants.isKeyDown(Minecraft.getInstance().getWindow().getWindow(), GLFW.GLFW_KEY_LEFT_SHIFT) ||
-                InputConstants.isKeyDown(Minecraft.getInstance().getWindow().getWindow(), GLFW.GLFW_KEY_RIGHT_SHIFT);
+        var window = Minecraft.getInstance().getWindow();
+        return InputConstants.isKeyDown(window, 340) || InputConstants.isKeyDown(window, 344);
     }
 
     private void handleCreateEditGroup(String newName) {
@@ -422,8 +413,10 @@ public class ManagerScreen extends AbstractContainerScreen<ManagerMenu> implemen
     }
 
     @Override
-    public boolean mouseClicked(double mouseX, double mouseY, int button) {
+    public boolean mouseClicked(MouseButtonEvent event, boolean isInside) {
         MousePositionManagerUtil.getLastKnownPosition();
+        double mouseX = event.x();
+        double mouseY = event.y();
 
         int newButtonX = leftPos + imageWidth - 36;
         int newButtonY = topPos + 4;
@@ -528,10 +521,10 @@ public class ManagerScreen extends AbstractContainerScreen<ManagerMenu> implemen
                     if (mouseX >= x && mouseX < x + 16 && mouseY >= rowY - 2 && mouseY < rowY - 2 + 16) {
                         LocalPlayer player = Minecraft.getInstance().player;
                         if (!stack.isEmpty()) {
-                            if (button == 1) { // RightClick
+                            if (event.button() == 1) { // RightClick
                                 assert player != null;
                                 player.connection.send(new PacketToggleLever(blockEntity.getBlockPos(), stack, group));
-                            } else if (button == 0) { // LeftClick
+                            } else if (event.button() == 0) { // LeftClick
                                 assert player != null;
                                 // PICKUP = Take item out of a manager / SWAP = Swap existing item with one in hand
                                 int clickType = carried.isEmpty() ? ClickAction.PICKUP.ordinal() : ClickAction.SWAP.ordinal();
@@ -589,11 +582,13 @@ public class ManagerScreen extends AbstractContainerScreen<ManagerMenu> implemen
             }
         }
 
-        return super.mouseClicked(mouseX, mouseY, button);
+        return super.mouseClicked(event, isInside);
     }
 
     @Override
-    public boolean mouseDragged(double mouseX, double mouseY, int button, double dragX, double dragY) {
+    public boolean mouseDragged(MouseButtonEvent event, double dragX, double dragY) {
+        double mouseX = event.x();
+        double mouseY = event.y();
         if (isDraggingScrollbar) {
             int scrollbarY = topPos + SCROLLBAR_Y_OFFSET;
             int handleHeight = 15;
@@ -608,7 +603,7 @@ public class ManagerScreen extends AbstractContainerScreen<ManagerMenu> implemen
             return true;
         }
 
-        return super.mouseDragged(mouseX, mouseY, button, dragX, dragY);
+        return super.mouseDragged(event, dragX, dragY);
     }
 
     @Override
@@ -627,8 +622,8 @@ public class ManagerScreen extends AbstractContainerScreen<ManagerMenu> implemen
     }
 
     @Override
-    public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
-        return super.keyPressed(keyCode, scanCode, modifiers);
+    public boolean keyPressed(@NonNull KeyEvent event) {
+        return super.keyPressed(event);
     }
 
     @Override

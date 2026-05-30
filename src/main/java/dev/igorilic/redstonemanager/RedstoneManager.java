@@ -11,6 +11,7 @@ import dev.igorilic.redstonemanager.network.PacketHandler;
 import dev.igorilic.redstonemanager.screen.ModMenuTypes;
 import dev.igorilic.redstonemanager.screen.custom.ManagerScreen;
 import dev.igorilic.redstonemanager.util.RMLogger;
+import net.minecraft.resources.Identifier;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.bus.api.SubscribeEvent;
@@ -18,9 +19,9 @@ import net.neoforged.fml.ModContainer;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.fml.common.Mod;
 import net.neoforged.fml.config.ModConfig;
-import net.neoforged.fml.event.lifecycle.FMLClientSetupEvent;
 import net.neoforged.fml.event.lifecycle.FMLCommonSetupEvent;
 import net.neoforged.neoforge.client.event.RegisterMenuScreensEvent;
+import net.neoforged.neoforge.client.event.RegisterRangeSelectItemModelPropertyEvent;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.server.ServerStartingEvent;
 
@@ -78,8 +79,8 @@ public class RedstoneManager {
     @EventBusSubscriber(modid = MOD_ID, value = Dist.CLIENT)
     public static class ClientModEvents {
         @SubscribeEvent
-        public static void onClientSetup(FMLClientSetupEvent event) {
-            ModItemProperties.addCustomItemProperties();
+        public static void onRegisterRangeSelectItemModelProperties(RegisterRangeSelectItemModelPropertyEvent event) {
+            event.register(Identifier.fromNamespaceAndPath(MOD_ID, "linked"), ModItemProperties.MAP_CODEC);
         }
 
         @SubscribeEvent

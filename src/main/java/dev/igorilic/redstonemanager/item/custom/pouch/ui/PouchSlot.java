@@ -1,13 +1,13 @@
 package dev.igorilic.redstonemanager.item.custom.pouch.ui;
 
 import net.minecraft.world.item.ItemStack;
-import net.neoforged.neoforge.items.IItemHandler;
-import net.neoforged.neoforge.items.SlotItemHandler;
+import net.neoforged.neoforge.transfer.item.ItemStacksResourceHandler;
+import net.neoforged.neoforge.transfer.item.ResourceHandlerSlot;
 import org.jetbrains.annotations.NotNull;
 
-public class PouchSlot extends SlotItemHandler {
-    public PouchSlot(IItemHandler itemHandler, int index, int xPosition, int yPosition) {
-        super(itemHandler, index, xPosition, yPosition);
+public class PouchSlot extends ResourceHandlerSlot {
+    public PouchSlot(ItemStacksResourceHandler handler, int handlerSlot, int xPosition, int yPosition) {
+        super(handler, handler::set, handlerSlot, xPosition, yPosition);
     }
 
     @Override

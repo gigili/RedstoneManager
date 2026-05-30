@@ -7,14 +7,14 @@ import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.neoforged.neoforge.network.handling.IPayloadHandler;
 import org.jetbrains.annotations.NotNull;
 
 public record PacketLeverStateResponse(BlockPos pos, boolean found, boolean powered)
         implements CustomPacketPayload {
 
-    public static final Type<PacketLeverStateResponse> TYPE = new Type<>(ResourceLocation.fromNamespaceAndPath(RedstoneManager.MOD_ID, "lever_state_response"));
+    public static final Type<PacketLeverStateResponse> TYPE = new Type<>(Identifier.fromNamespaceAndPath(RedstoneManager.MOD_ID, "lever_state_response"));
 
     public static final StreamCodec<FriendlyByteBuf, PacketLeverStateResponse> STREAM_CODEC =
             StreamCodec.composite(

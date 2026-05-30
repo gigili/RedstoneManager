@@ -3,7 +3,6 @@ package dev.igorilic.redstonemanager.util;
 import dev.igorilic.redstonemanager.component.ModDataComponents;
 import dev.igorilic.redstonemanager.item.custom.RedstoneLinkerItem;
 import net.minecraft.core.BlockPos;
-import net.minecraft.server.TickTask;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.TicketType;
 import net.minecraft.world.item.ItemStack;
@@ -19,56 +18,51 @@ public class ChunkHandler {
         BlockPos cords = stack.get(ModDataComponents.COORDINATES);
         if (cords == null) return;
 
-        ChunkPos chunkPos = new ChunkPos(cords);
+        ChunkPos chunkPos = ChunkPos.containing(cords);
         if (level.isLoaded(cords)) {
             handler(level, cords, callback, chunkPos);
             return;
         }
 
-        level.getChunkSource().addRegionTicket(
+        level.getChunkSource().addTicketWithRadius(
                 TicketType.FORCED,
                 chunkPos,
-                2,
-                chunkPos
+                2
         );
 
-        // Delay execution by a few ticks to let chunk load
-        level.getServer().execute(() -> {
-            // Wait a few ticks before checking
+        level.getServer().executeIfPossible(() -> {
             handler(level, cords, callback, chunkPos);
         });
     }
 
     public static void tempLoadChunk(ServerLevel level, BlockPos pos, Consumer<ServerLevel> callback) {
-        ChunkPos chunkPos = new ChunkPos(pos);
+        ChunkPos chunkPos = ChunkPos.containing(pos);
 
         if (level.isLoaded(pos)) {
             handler(level, pos, callback, chunkPos);
             return;
         }
 
-        level.getChunkSource().addRegionTicket(
+        level.getChunkSource().addTicketWithRadius(
                 TicketType.FORCED,
                 chunkPos,
-                2,
-                chunkPos
+                2
         );
 
         handler(level, pos, callback, chunkPos);
     }
 
     private static void handler(ServerLevel level, BlockPos pos, Consumer<ServerLevel> callback, ChunkPos chunkPos) {
-        level.getServer().tell(new TickTask(level.getServer().getTickCount() + 2, () -> {
-            if (level.isLoaded(pos) && level.getChunkSource().hasChunk(chunkPos.x, chunkPos.z)) {
+        level.getServer().executeIfPossible(() -> {
+            if (level.isLoaded(pos) && level.getChunkSource().hasChunk(chunkPos.x(), chunkPos.z())) {
                 callback.accept(level);
             }
 
-            level.getChunkSource().removeRegionTicket(
+            level.getChunkSource().removeTicketWithRadius(
                     TicketType.FORCED,
                     chunkPos,
-                    2,
-                    chunkPos
+                    2
             );
-        }));
+        });
     }
 }

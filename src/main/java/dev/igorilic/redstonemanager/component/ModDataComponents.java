@@ -5,7 +5,7 @@ import dev.igorilic.redstonemanager.RedstoneManager;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.component.DataComponentType;
 import net.minecraft.core.registries.Registries;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.neoforge.registries.DeferredHolder;
 import net.neoforged.neoforge.registries.DeferredRegister;
@@ -18,7 +18,7 @@ public class ModDataComponents {
     public static final DeferredHolder<DataComponentType<?>, DataComponentType<BlockPos>> COORDINATES = register("coordinates", builder -> builder.persistent(BlockPos.CODEC));
     public static final DeferredHolder<DataComponentType<?>, DataComponentType<BlockPos>> COORDINATES_START = register("coordinates_start", builder -> builder.persistent(BlockPos.CODEC));
     public static final DeferredHolder<DataComponentType<?>, DataComponentType<BlockPos>> COORDINATES_END = register("coordinates_end", builder -> builder.persistent(BlockPos.CODEC));
-    public static final DeferredHolder<DataComponentType<?>, DataComponentType<ResourceLocation>> DIMENSION = register("dimension", builder -> builder.persistent(ResourceLocation.CODEC));
+    public static final DeferredHolder<DataComponentType<?>, DataComponentType<Identifier>> DIMENSION = register("dimension", builder -> builder.persistent(Identifier.CODEC));
     public static final DeferredHolder<DataComponentType<?>, DataComponentType<String>> ITEM_UUID = register("item_uuid", builder -> builder.persistent(Codec.STRING));
 
 

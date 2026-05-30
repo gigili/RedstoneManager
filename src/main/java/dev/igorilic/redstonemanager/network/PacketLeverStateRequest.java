@@ -8,8 +8,8 @@ import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
+import net.minecraft.resources.Identifier;
 import net.minecraft.resources.ResourceKey;
-import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
@@ -22,14 +22,14 @@ import org.jetbrains.annotations.NotNull;
 import java.util.Objects;
 import java.util.Optional;
 
-public record PacketLeverStateRequest(BlockPos pos, Optional<ResourceLocation> dim) implements CustomPacketPayload {
-    public static final CustomPacketPayload.Type<PacketLeverStateRequest> TYPE = new CustomPacketPayload.Type<>(ResourceLocation.fromNamespaceAndPath(RedstoneManager.MOD_ID, "lever_state_request"));
+public record PacketLeverStateRequest(BlockPos pos, Optional<Identifier> dim) implements CustomPacketPayload {
+    public static final CustomPacketPayload.Type<PacketLeverStateRequest> TYPE = new CustomPacketPayload.Type<>(Identifier.fromNamespaceAndPath(RedstoneManager.MOD_ID, "lever_state_request"));
 
     public static final StreamCodec<RegistryFriendlyByteBuf, PacketLeverStateRequest> STREAM_CODEC =
             StreamCodec.composite(
                     BlockPos.STREAM_CODEC,
                     PacketLeverStateRequest::pos,
-                    ByteBufCodecs.optional(ResourceLocation.STREAM_CODEC),
+                    ByteBufCodecs.optional(Identifier.STREAM_CODEC),
                     PacketLeverStateRequest::dim,
                     PacketLeverStateRequest::new
             );
@@ -41,11 +41,11 @@ public record PacketLeverStateRequest(BlockPos pos, Optional<ResourceLocation> d
 
     public static final IPayloadHandler<PacketLeverStateRequest> HANDLER = (payload, context) -> {
         if (context.player() instanceof ServerPlayer player) {
-            ServerLevel current = player.serverLevel();
+            ServerLevel current = player.level();
 
             ServerLevel target = current;
             if (payload.dim.isPresent()) {
-                target = Objects.equals(current.dimension().location(), payload.dim.get())
+                target = Objects.equals(current.dimension().identifier(), payload.dim.get())
                         ? current
                         : resolveLevel(current, payload.dim.get());
             }
@@ -57,7 +57,7 @@ public record PacketLeverStateRequest(BlockPos pos, Optional<ResourceLocation> d
         }
     };
 
-    private static ServerLevel resolveLevel(ServerLevel level, ResourceLocation dimId) {
+    private static ServerLevel resolveLevel(ServerLevel level, Identifier dimId) {
         if (!(level instanceof ServerLevel sl)) return null;
         MinecraftServer srv = sl.getServer();
         ResourceKey<Level> key = ResourceKey.create(Registries.DIMENSION, dimId);

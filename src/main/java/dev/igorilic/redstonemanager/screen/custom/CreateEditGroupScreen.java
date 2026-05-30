@@ -1,11 +1,13 @@
 package dev.igorilic.redstonemanager.screen.custom;
 
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.components.StringWidget;
 import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.client.input.KeyEvent;
+import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.network.chat.Component;
 import org.lwjgl.glfw.GLFW;
 
@@ -66,7 +68,7 @@ public class CreateEditGroupScreen extends Screen {
     }
 
     @Override
-    public void render(GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
+    public void extractRenderState(GuiGraphicsExtractor guiGraphics, int screenX, int screenY, float partialTick) {
         int padding = 16;
         int spacingBetweenLines = 6;
 
@@ -88,10 +90,10 @@ public class CreateEditGroupScreen extends Screen {
         int y2 = centerY + boxHeight / 2;
 
         // Fill with dark gray, low-transparency background
-        guiGraphics.fill(x1, y1, x2, y2 - 5, 0xDD555555); // ARGB — 0xDD = ~87% opacity
+        guiGraphics.fill(RenderPipelines.GUI, x1, y1, x2, y2 - 5, 0xDD555555); // ARGB — 0xDD = ~87% opacity
 
         // Then render everything else
-        super.render(guiGraphics, mouseX, mouseY, partialTick);
+        super.extractRenderState(guiGraphics, screenX, screenY, partialTick);
     }
 
     @Override
@@ -100,23 +102,23 @@ public class CreateEditGroupScreen extends Screen {
     }
 
     @Override
-    public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
-        if (keyCode == GLFW.GLFW_KEY_ESCAPE) {
-            return super.keyPressed(keyCode, scanCode, modifiers);
+    public boolean keyPressed(KeyEvent event) {
+        if (event.key() == GLFW.GLFW_KEY_ESCAPE) {
+            return super.keyPressed(event);
         }
 
-        if (keyCode == GLFW.GLFW_KEY_ENTER || keyCode == GLFW.GLFW_KEY_KP_ENTER) {
+        if (event.key() == GLFW.GLFW_KEY_ENTER || event.key() == GLFW.GLFW_KEY_KP_ENTER) {
             groupNameSubmit();
             return true;
         }
 
         if (input.isFocused()) {
-            if (input.keyPressed(keyCode, scanCode, modifiers) || input.canConsumeInput()) {
+            if (input.keyPressed(event) || input.canConsumeInput()) {
                 return true;
             }
         }
 
-        return super.keyPressed(keyCode, scanCode, modifiers);
+        return super.keyPressed(event);
     }
 
     private void groupNameSubmit() {

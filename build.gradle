@@ -2,7 +2,7 @@ plugins {
     id 'java-library'
     id 'maven-publish'
     id 'idea'
-    id 'net.neoforged.moddev' version '2.0.99'
+    id 'net.neoforged.moddev' version '2.0.141'
 }
 
 
@@ -12,6 +12,7 @@ group = mod_group_id
 def mavenUrl = System.getenv("MAVEN_URL")
 def mavenUser = System.getenv("MAVEN_USERNAME")
 def mavenPass = System.getenv("MAVEN_TOKEN")
+def mc_version = "neoforge_${minecraft_version}"
 
 println("Building version: ${version}")
 
@@ -42,16 +43,11 @@ base {
     archivesName = mod_id
 }
 
-java.toolchain.languageVersion = JavaLanguageVersion.of(21)
+java.toolchain.languageVersion = JavaLanguageVersion.of(25)
 
 neoForge {
     // Specify the version of NeoForge to use.
     version = project.neo_version
-
-    parchment {
-        mappingsVersion = project.parchment_mappings_version
-        minecraftVersion = project.parchment_minecraft_version
-    }
 
     // This line is optional. Access Transformers are automatically detected
     // accessTransformers.add('src/main/resources/META-INF/accesstransformer.cfg')
@@ -64,6 +60,13 @@ neoForge {
 
             // Comma-separated list of namespaces to load gametests from. Empty = all namespaces.
             systemProperty 'neoforge.enabledGameTestNamespaces', project.mod_id
+        }
+
+        client2 {
+            client()
+            systemProperty 'neoforge.enabledGameTestNamespaces', project.mod_id
+            gameDirectory = file('run/c1')
+            programArguments.addAll '--username', 'TestPlayer1'
         }
 
         server {
@@ -81,7 +84,7 @@ neoForge {
         }
 
         data {
-            data()
+            clientData()
 
             // example of overriding the workingDirectory set in configureEach above, uncomment if you want to use it
             // gameDirectory = project.file('run-data')
@@ -116,8 +119,6 @@ neoForge {
         }
     }
 
-    def mc_version = "neoforge_${minecraft_version}"
-
     jar {
         archiveBaseName.set(mod_id)
         archiveVersion.set(version)
@@ -151,22 +152,22 @@ dependencies {
     // http://www.gradle.org/docs/current/userguide/artifact_dependencies_tutorial.html
     // http://www.gradle.org/docs/current/userguide/dependency_management.html
 
-    implementation "maven.modrinth:jade:${jade_version}"
-
-    runtimeOnly "curse.maven:xycraft-653786:6872525"
-    runtimeOnly "curse.maven:xycraft-world-653789:6872532"
+    runtimeOnly("curse.maven:jade-324717:8068368")
 
     // Architectury
-    runtimeOnly("curse.maven:architectury-api-419699:5786327")
+    // runtimeOnly("curse.maven:architectury-api-419699:5786327")
 
-    // FTB Chunks 2101.1.12 (1.21.1)
-    runtimeOnly("curse.maven:ftb-chunks-forge-314906:7155422")
+    // FTB Chunks
+    runtimeOnly("curse.maven:ftb-chunks-forge-314906:8165043")
 
-    // FTB Library 2101.1.17 (1.21.1)
-    runtimeOnly("curse.maven:ftb-library-forge-404465:7151938")
+    // FTB Ranks
+    runtimeOnly("curse.maven:ftb-ranks-314905:7921450")
 
-    // FTB Teams 2101.1.1 (1.21.1)
-    runtimeOnly("curse.maven:ftb-teams-forge-404468:7144060")
+    // FTB Library
+    runtimeOnly("curse.maven:ftb-library-forge-404465:8160272")
+
+    // FTB Teams
+    runtimeOnly("curse.maven:ftb-teams-forge-404468:8074003")
 }
 
 // This block of code expands all declared replace properties in the specified resource targets.
@@ -175,8 +176,6 @@ var generateModMetadata = tasks.register("generateModMetadata", ProcessResources
     var replaceProperties = [minecraft_version      : minecraft_version,
                              minecraft_version_range: minecraft_version_range,
                              neo_version            : neo_version,
-                             neo_version_range      : neo_version_range,
-                             loader_version_range   : loader_version_range,
                              mod_id                 : mod_id,
                              mod_name               : mod_name,
                              mod_license            : mod_license,
@@ -199,8 +198,8 @@ neoForge.ideSyncTask generateModMetadata
 publishing {
     publications {
         mavenNeoForge(MavenPublication) {
-            artifactId = mod_id
             from components.java
+            artifactId = "${mod_id}-${mc_version}"
         }
     }
 

@@ -7,7 +7,6 @@ import dev.igorilic.redstonemanager.item.custom.pouch.PouchItem;
 import dev.igorilic.redstonemanager.network.PacketHandler;
 import dev.igorilic.redstonemanager.network.PacketLeverStateResponse;
 import dev.igorilic.redstonemanager.screen.custom.ManagerMenu;
-import dev.igorilic.redstonemanager.util.IUpdatable;
 import dev.igorilic.redstonemanager.util.LinkerGroup;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -15,15 +14,12 @@ import net.minecraft.core.HolderLookup;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.nbt.CompoundTag;
-import net.minecraft.nbt.ListTag;
-import net.minecraft.nbt.Tag;
-import net.minecraft.network.Connection;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.protocol.Packet;
 import net.minecraft.network.protocol.game.ClientGamePacketListener;
 import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
+import net.minecraft.resources.Identifier;
 import net.minecraft.resources.ResourceKey;
-import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
@@ -45,6 +41,8 @@ import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.properties.AttachFace;
 import net.minecraft.world.level.gameevent.GameEvent;
+import net.minecraft.world.level.storage.ValueInput;
+import net.minecraft.world.level.storage.ValueOutput;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -149,7 +147,7 @@ public class RedstoneManagerBlockEntity extends BlockEntity implements MenuProvi
         setChanged();
     }
 
-    private ServerLevel resolveLevel(ResourceLocation dimId) {
+    private ServerLevel resolveLevel(Identifier dimId) {
         if (!(level instanceof ServerLevel sl)) return null;
         MinecraftServer srv = sl.getServer();
         ResourceKey<Level> key = ResourceKey.create(Registries.DIMENSION, dimId);
@@ -164,9 +162,9 @@ public class RedstoneManagerBlockEntity extends BlockEntity implements MenuProvi
             if (!(stack.getItem() instanceof RedstoneLinkerItem)) continue;
 
             BlockPos leverPos = stack.get(ModDataComponents.COORDINATES);
-            ResourceLocation dimension = stack.get(ModDataComponents.DIMENSION);
+            Identifier dimension = stack.get(ModDataComponents.DIMENSION);
 
-            ServerLevel target = Objects.equals(current.dimension().location(), dimension)
+            ServerLevel target = Objects.equals(current.dimension().identifier(), dimension)
                     ? current
                     : resolveLevel(dimension);
 
@@ -219,70 +217,52 @@ public class RedstoneManagerBlockEntity extends BlockEntity implements MenuProvi
     }
 
     @Override
-    protected void saveAdditional(@NotNull CompoundTag tag, HolderLookup.@NotNull Provider registries) {
-        super.saveAdditional(tag, registries);
-        ListTag groupList = new ListTag();
+    protected void saveAdditional(@NotNull ValueOutput output) {
+        super.saveAdditional(output);
+        var groupsList = output.childrenList("Groups");
 
         for (Map.Entry<String, LinkerGroup> entry : items.entrySet()) {
-            CompoundTag groupTag = new CompoundTag();
-            groupTag.putString("Name", entry.getKey());
-            groupTag.putBoolean("IsPowered", entry.getValue().isPowered());
+            var groupOutput = groupsList.addChild();
+            groupOutput.putString("Name", entry.getKey());
+            groupOutput.putBoolean("IsPowered", entry.getValue().isPowered());
 
-            ListTag itemList = new ListTag();
+            var itemsList = groupOutput.list("Links", ItemStack.CODEC);
             for (ItemStack stack : entry.getValue().getItems()) {
                 if (stack == ItemStack.EMPTY) continue;
-                itemList.add(stack.save(registries));
+                itemsList.add(stack);
             }
-
-            groupTag.put("Links", itemList);
-            groupList.add(groupTag);
-        }
-
-        tag.put("Groups", groupList);
-        setChanged();
-        if (level != null && level.isClientSide) {
-            var mc = net.minecraft.client.Minecraft.getInstance();
-            mc.execute(() -> {
-                if (mc.screen instanceof IUpdatable ui) ui.update(items);
-            });
         }
     }
 
     @Override
-    protected void loadAdditional(@NotNull CompoundTag tag, HolderLookup.@NotNull Provider registries) {
-        super.loadAdditional(tag, registries);
+    protected void loadAdditional(@NotNull ValueInput input) {
+        super.loadAdditional(input);
         this.items.clear();
 
-        if (tag.contains("Groups", Tag.TAG_LIST)) {
-            ListTag groupList = tag.getList("Groups", Tag.TAG_COMPOUND);
+        var groupsList = input.childrenListOrEmpty("Groups");
+        for (ValueInput groupInput : groupsList) {
+            String name = groupInput.getStringOr("Name", "");
+            boolean isPowered = groupInput.getBooleanOr("IsPowered", false);
 
-            for (Tag groupTagBase : groupList) {
-                CompoundTag groupTag = (CompoundTag) groupTagBase;
-                String name = groupTag.getString("Name");
-                boolean isPowered = groupTag.getBoolean("IsPowered");
-
-                List<ItemStack> stacks = new ArrayList<>();
-                ListTag itemList = groupTag.getList("Links", Tag.TAG_COMPOUND);
-
-                for (Tag itemTagBase : itemList) {
-                    CompoundTag itemTag = (CompoundTag) itemTagBase;
-                    ItemStack stack = ItemStack.parseOptional(registries, itemTag);
-                    if (stack == ItemStack.EMPTY) continue;
-                    stacks.add(stack);
-                }
-
-
-                this.items.put(name, new LinkerGroup(name, isPowered, stacks));
+            List<ItemStack> stacks = new ArrayList<>();
+            var itemStacks = groupInput.listOrEmpty("Links", ItemStack.CODEC);
+            for (ItemStack stack : itemStacks) {
+                stacks.add(stack);
             }
+
+            this.items.put(name, new LinkerGroup(name, isPowered, stacks));
         }
 
         setChanged();
-        if (level != null && level.isClientSide) {
-            var mc = net.minecraft.client.Minecraft.getInstance();
-            mc.execute(() -> {
-                if (mc.screen instanceof IUpdatable ui) ui.update(items);
-            });
+    }
+
+    @Override
+    public void preRemoveSideEffects(@NotNull BlockPos pos, @NotNull BlockState state) {
+        if (level != null && !level.isClientSide()) {
+            drops();
+            level.updateNeighbourForOutputSignal(pos, state.getBlock());
         }
+        super.preRemoveSideEffects(pos, state);
     }
 
     public void drops() {
@@ -311,11 +291,6 @@ public class RedstoneManagerBlockEntity extends BlockEntity implements MenuProvi
     }
 
     @Override
-    public void onDataPacket(@NotNull Connection connection, @NotNull ClientboundBlockEntityDataPacket clientboundBlockEntityDataPacket, HolderLookup.@NotNull Provider provider) {
-        super.onDataPacket(connection, clientboundBlockEntityDataPacket, provider);
-    }
-
-    @Override
     public @Nullable AbstractContainerMenu createMenu(int i, @NotNull Inventory inventory, @NotNull Player player) {
         return new ManagerMenu(i, inventory, this);
     }
@@ -323,8 +298,8 @@ public class RedstoneManagerBlockEntity extends BlockEntity implements MenuProvi
     public void toggleLinkedLever(ItemStack stack, String group, ServerPlayer player) {
         if (!(level instanceof ServerLevel current)) return;
 
-        ResourceLocation dimension = stack.get(ModDataComponents.DIMENSION);
-        ServerLevel target = Objects.equals(current.dimension().location(), dimension)
+        Identifier dimension = stack.get(ModDataComponents.DIMENSION);
+        ServerLevel target = Objects.equals(current.dimension().identifier(), dimension)
                 ? current
                 : resolveLevel(dimension);
 
@@ -356,8 +331,8 @@ public class RedstoneManagerBlockEntity extends BlockEntity implements MenuProvi
             BlockPos pos = stack.get(ModDataComponents.COORDINATES);
             if (pos == null) continue;
 
-            ResourceLocation dimension = stack.get(ModDataComponents.DIMENSION);
-            ServerLevel targetDimension = Objects.equals(level.dimension().location(), dimension)
+            Identifier dimension = stack.get(ModDataComponents.DIMENSION);
+            ServerLevel targetDimension = Objects.equals(level.dimension().identifier(), dimension)
                     ? sl
                     : resolveLevel(dimension);
 
@@ -390,7 +365,7 @@ public class RedstoneManagerBlockEntity extends BlockEntity implements MenuProvi
     }
 
     public void playSound(SoundEvent soundEvent, float volume, float pitch) {
-        if (level == null || level.isClientSide) return;
+        if (level == null || level.isClientSide()) return;
         level.playSound(null, getBlockPos(), soundEvent, SoundSource.BLOCKS, volume, pitch);
     }
 
@@ -424,7 +399,7 @@ public class RedstoneManagerBlockEntity extends BlockEntity implements MenuProvi
         level.updateNeighbourForOutputSignal(attached, toggled.getBlock());
 
         // ensure redstone re-evaluates shapes (some dust layouts need this)
-        level.blockUpdated(pos, toggled.getBlock());
+        level.updateNeighborsAt(pos, toggled.getBlock());
 
         // game event (optional but matches vanilla)
         level.gameEvent(null, toggled.getValue(LeverBlock.POWERED) ? GameEvent.BLOCK_ACTIVATE : GameEvent.BLOCK_DEACTIVATE, pos);
@@ -433,19 +408,37 @@ public class RedstoneManagerBlockEntity extends BlockEntity implements MenuProvi
     @Override
     public @NotNull CompoundTag getUpdateTag(HolderLookup.@NotNull Provider registries) {
         CompoundTag tag = new CompoundTag();
-        saveAdditional(tag, registries);
+        var groupsList = new net.minecraft.nbt.ListTag();
+
+        for (Map.Entry<String, LinkerGroup> entry : items.entrySet()) {
+            CompoundTag groupTag = new CompoundTag();
+            groupTag.putString("Name", entry.getKey());
+            groupTag.putBoolean("IsPowered", entry.getValue().isPowered());
+
+            var itemsList = new net.minecraft.nbt.ListTag();
+            for (ItemStack stack : entry.getValue().getItems()) {
+                if (stack == ItemStack.EMPTY) continue;
+                ItemStack.CODEC.encodeStart(registries.createSerializationContext(net.minecraft.nbt.NbtOps.INSTANCE), stack)
+                        .ifSuccess(tagElement -> itemsList.add(tagElement));
+            }
+
+            groupTag.put("Links", itemsList);
+            groupsList.add(groupTag);
+        }
+
+        tag.put("Groups", groupsList);
         return tag;
     }
 
     @Override
-    public void handleUpdateTag(@NotNull CompoundTag tag, HolderLookup.@NotNull Provider registries) {
-        loadAdditional(tag, registries);
+    public void handleUpdateTag(@NotNull ValueInput input) {
+        loadAdditional(input);
     }
 
     public boolean handleBulkLink(ItemStack linkerStack, ServerPlayer player) {
         BlockPos start = linkerStack.get(ModDataComponents.COORDINATES_START);
         BlockPos end = linkerStack.get(ModDataComponents.COORDINATES_END);
-        ResourceLocation dim = linkerStack.get(ModDataComponents.DIMENSION);
+        Identifier dim = linkerStack.get(ModDataComponents.DIMENSION);
 
         if (start != null && end != null && dim != null) {
             return bulkAddByRange(start, end, dim, player);
@@ -459,7 +452,7 @@ public class RedstoneManagerBlockEntity extends BlockEntity implements MenuProvi
         return false;
     }
 
-    private boolean bulkAddByRange(BlockPos start, BlockPos end, ResourceLocation dim, ServerPlayer player) {
+    private boolean bulkAddByRange(BlockPos start, BlockPos end, Identifier dim, ServerPlayer player) {
         ServerLevel targetLevel = resolveLevel(dim);
         if (targetLevel == null) return false;
         int count = 0;
@@ -502,7 +495,7 @@ public class RedstoneManagerBlockEntity extends BlockEntity implements MenuProvi
         return shouldConsume;
     }
 
-    private void bulkAddBySimilarity(BlockPos linked, ResourceLocation dim, ServerPlayer player) {
+    private void bulkAddBySimilarity(BlockPos linked, Identifier dim, ServerPlayer player) {
         ServerLevel targetLevel = resolveLevel(dim);
         if (targetLevel == null) return;
 
@@ -554,11 +547,11 @@ public class RedstoneManagerBlockEntity extends BlockEntity implements MenuProvi
         return items.keySet().iterator().next();
     }
 
-    private boolean isAlreadyLinked(BlockPos pos, ResourceLocation dim) {
+    private boolean isAlreadyLinked(BlockPos pos, Identifier dim) {
         for (LinkerGroup group : items.values()) {
             for (ItemStack stack : group.getItems()) {
                 BlockPos p = stack.get(ModDataComponents.COORDINATES);
-                ResourceLocation d = stack.get(ModDataComponents.DIMENSION);
+                Identifier d = stack.get(ModDataComponents.DIMENSION);
                 if (pos.equals(p) && Objects.equals(dim, d)) return true;
             }
         }

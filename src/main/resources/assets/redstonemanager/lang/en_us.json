@@ -1,5 +1,6 @@
 {
   "block.redstonemanager.rm_manager": "Redstone Manager",
+  "item.redstonemanager.rm_manager": "Redstone Manager",
   "confirm.redstonemanager.manager.delete_group": "Are you sure you want to delete the group: %s?",
   "confirm.redstonemanager.manager.delete_group_desc": "All items in the group will be dropped on the ground!",
   "creative.redstonemanager.tab": "Redstone Manager",

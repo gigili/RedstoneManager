@@ -1,0 +1,6 @@
+{
+  "model": {
+	"type": "minecraft:model",
+	"model": "redstonemanager:block/rm_manager"
+  }
+}

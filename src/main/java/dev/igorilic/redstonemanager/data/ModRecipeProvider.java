@@ -3,25 +3,20 @@ package dev.igorilic.redstonemanager.data;
 import dev.igorilic.redstonemanager.block.ModBlocks;
 import dev.igorilic.redstonemanager.item.ModItems;
 import net.minecraft.core.HolderLookup;
-import net.minecraft.data.PackOutput;
 import net.minecraft.data.recipes.RecipeCategory;
 import net.minecraft.data.recipes.RecipeOutput;
 import net.minecraft.data.recipes.RecipeProvider;
 import net.minecraft.data.recipes.ShapedRecipeBuilder;
 import net.minecraft.world.item.Items;
-import net.neoforged.neoforge.common.conditions.IConditionBuilder;
-import org.jetbrains.annotations.NotNull;
 
-import java.util.concurrent.CompletableFuture;
-
-public class ModRecipeProvider extends RecipeProvider implements IConditionBuilder {
-    public ModRecipeProvider(PackOutput packOutput, CompletableFuture<HolderLookup.Provider> registries) {
-        super(packOutput, registries);
+public class ModRecipeProvider extends RecipeProvider {
+    public ModRecipeProvider(HolderLookup.Provider registries, RecipeOutput output) {
+        super(registries, output);
     }
 
     @Override
-    protected void buildRecipes(@NotNull RecipeOutput recipeOutput) {
-        ShapedRecipeBuilder.shaped(RecipeCategory.REDSTONE, ModBlocks.RM_MANAGER_BLOCK.get())
+    protected void buildRecipes() {
+        ShapedRecipeBuilder.shaped(this.items, RecipeCategory.REDSTONE, ModBlocks.RM_MANAGER_BLOCK.get())
                 .pattern("QCQ")
                 .pattern("RPR")
                 .pattern("QCQ")
@@ -30,9 +25,9 @@ public class ModRecipeProvider extends RecipeProvider implements IConditionBuild
                 .define('R', Items.REPEATER)
                 .define('P', Items.ENDER_PEARL)
                 .unlockedBy("has_redstone", has(Items.REDSTONE))
-                .save(recipeOutput);
+                .save(output);
 
-        ShapedRecipeBuilder.shaped(RecipeCategory.REDSTONE, ModItems.RM_LINKER.get())
+        ShapedRecipeBuilder.shaped(this.items, RecipeCategory.REDSTONE, ModItems.RM_LINKER.get())
                 .pattern("DRD")
                 .pattern("CPC")
                 .pattern("DRD")
@@ -41,9 +36,9 @@ public class ModRecipeProvider extends RecipeProvider implements IConditionBuild
                 .define('R', Items.REPEATER)
                 .define('P', Items.ENDER_PEARL)
                 .unlockedBy("has_redstone", has(Items.REDSTONE))
-                .save(recipeOutput);
+                .save(output);
 
-        ShapedRecipeBuilder.shaped(RecipeCategory.REDSTONE, ModItems.RM_POUCH.get())
+        ShapedRecipeBuilder.shaped(this.items, RecipeCategory.REDSTONE, ModItems.RM_POUCH.get())
                 .pattern("LRL")
                 .pattern("SCS")
                 .pattern("LRL")
@@ -52,6 +47,6 @@ public class ModRecipeProvider extends RecipeProvider implements IConditionBuild
                 .define('R', Items.REDSTONE)
                 .define('S', Items.STRING)
                 .unlockedBy("has_redstone", has(Items.REDSTONE))
-                .save(recipeOutput);
+                .save(output);
     }
 }

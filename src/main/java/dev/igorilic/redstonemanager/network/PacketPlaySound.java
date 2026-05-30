@@ -8,7 +8,7 @@ import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvent;
 import net.neoforged.neoforge.network.handling.IPayloadHandler;
@@ -16,7 +16,7 @@ import org.jetbrains.annotations.NotNull;
 
 public record PacketPlaySound(BlockPos managerPos, Holder<SoundEvent> soundEvent, float volume,
                               float pitch) implements CustomPacketPayload {
-    public static final Type<PacketPlaySound> TYPE = new Type<>(ResourceLocation.fromNamespaceAndPath(RedstoneManager.MOD_ID, "play_sound"));
+    public static final Type<PacketPlaySound> TYPE = new Type<>(Identifier.fromNamespaceAndPath(RedstoneManager.MOD_ID, "play_sound"));
 
     public static final StreamCodec<RegistryFriendlyByteBuf, PacketPlaySound> STREAM_CODEC =
             StreamCodec.composite(

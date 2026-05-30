@@ -17,7 +17,7 @@ public class MousePositionManagerUtil {
 
     public static void setLastKnownPosition() {
         Minecraft mc = Minecraft.getInstance();
-        long window = mc.getWindow().getWindow();
+        long window = mc.getWindow().handle();
         GLFW.glfwSetCursorPos(window, lastMouseX, lastMouseY);
     }
 
