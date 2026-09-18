@@ -80,7 +80,11 @@ public class RedstoneManagerBlockEntity extends BlockEntity implements MenuProvi
     }
 
     public void createGroup(String groupName, ServerPlayer player) {
-        items.computeIfAbsent(groupName, k -> new LinkerGroup(groupName)).addItem(ItemStack.EMPTY);
+        groupName = groupName.trim();
+        if (groupName.isEmpty() || items.containsKey(groupName)) return;
+
+        items.put(groupName, new LinkerGroup(groupName));
+        items.get(groupName).addItem(ItemStack.EMPTY);
         updateGroupPoweredState(groupName);
         setChanged();
         if (level != null) {
@@ -102,7 +106,8 @@ public class RedstoneManagerBlockEntity extends BlockEntity implements MenuProvi
 
     public void renameGroup(String oldName, String newName) {
         if (!items.containsKey(oldName)) return;
-        if (newName.isEmpty()) return;
+        newName = newName.trim();
+        if (newName.isEmpty() || (!oldName.equals(newName) && items.containsKey(newName))) return;
 
         LinkerGroup group = items.get(oldName);
         group.setGroupName(newName);
@@ -315,7 +320,7 @@ public class RedstoneManagerBlockEntity extends BlockEntity implements MenuProvi
         flipLeverVanilla(target, leverPos);
 
         updateGroupPoweredState(group);
-        PacketHandler.sendToClient(player, new PacketLeverStateResponse(leverPos, true, !isPowered));
+        PacketHandler.sendToClient(player, new PacketLeverStateResponse(leverPos, Optional.ofNullable(dimension), true, !isPowered));
         playSound(SoundEvents.LEVER_CLICK, 0.3f, !isPowered ? 0.6F : 0.5F);
         setChanged();
     }
@@ -343,7 +348,7 @@ public class RedstoneManagerBlockEntity extends BlockEntity implements MenuProvi
 
             if (st.getValue(LeverBlock.POWERED) != target) {
                 flipLeverVanilla(targetDimension, pos);
-                PacketHandler.sendToClient(player, new PacketLeverStateResponse(pos, true, target));
+                PacketHandler.sendToClient(player, new PacketLeverStateResponse(pos, Optional.ofNullable(dimension), true, target));
             }
         }
 

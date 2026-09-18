@@ -53,7 +53,7 @@ public record PacketLeverStateRequest(BlockPos pos, Optional<Identifier> dim) im
             BlockState state = target.getBlockState(payload.pos);
             boolean found = LinkerGroup.canLink(state);
             boolean powered = found && state.getValue(LeverBlock.POWERED);
-            PacketHandler.sendToClient(player, new PacketLeverStateResponse(payload.pos, found, powered));
+            PacketHandler.sendToClient(player, new PacketLeverStateResponse(payload.pos, payload.dim, found, powered));
         }
     };
 

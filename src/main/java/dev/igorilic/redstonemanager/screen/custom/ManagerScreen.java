@@ -14,6 +14,7 @@ import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.client.input.KeyEvent;
 import net.minecraft.client.input.MouseButtonEvent;
@@ -150,7 +151,7 @@ public class ManagerScreen extends AbstractContainerScreen<ManagerMenu> implemen
         int newButtonY = topPos + 3;
         guiGraphics.blit(RenderPipelines.GUI_TEXTURED, GUI_BUTTONS, newButtonX, newButtonY, 0, 0, 11, 11, 33, 11);
         if (screenX >= newButtonX && screenX < newButtonX + 11 && screenY >= newButtonY && screenY < newButtonY + 11) {
-            guiGraphics.text(font, Component.translatable("tooltip.redstonemanager.manager.create_group"), screenX, screenY, 0xFFFFFFFF);
+            guiGraphics.setTooltipForNextFrame(font, Component.translatable("tooltip.redstonemanager.manager.create_group"), screenX, screenY);
         }
     }
 
@@ -213,14 +214,9 @@ public class ManagerScreen extends AbstractContainerScreen<ManagerMenu> implemen
                     int baseX = startX + 3;
                     int baseY = rowY + 5;
 
-                    double scale = Minecraft.getInstance().getWindow().getGuiScale();
-                    int scissorX = (int) (baseX * scale);
-                    int scissorY = (int) ((this.height - baseY - font.lineHeight) * scale);
-                    int scissorW = (int) (maxVisibleWidth * scale);
-                    int scissorH = (int) (font.lineHeight * scale);
-
-                    // Enable scissor with correct coords
-                    guiGraphics.enableScissor(scissorX, scissorY, scissorW, scissorH);
+                    // GuiGraphicsExtractor uses GUI coordinates and converts them to
+                    // framebuffer coordinates later in the rendering pipeline.
+                    guiGraphics.enableScissor(baseX, baseY, baseX + maxVisibleWidth, baseY + font.lineHeight);
 
                     String visible1 = getVisibleSubstring(font, groupName, pixelOffset, maxVisibleWidth);
                     guiGraphics.text(font, visible1, baseX, baseY, 0xFF80FFE6, false);
@@ -268,20 +264,16 @@ public class ManagerScreen extends AbstractContainerScreen<ManagerMenu> implemen
                             if (leverPos != null) {
                                 LeverStateCache.requestIfNeeded(leverPos, Optional.ofNullable(leverDimension));
 
-                                LeverStateCache.get(leverPos).ifPresentOrElse(cached -> {
-                                    Component extraLabel;
-                                    if (!cached.found()) {
-                                        extraLabel = Component.translatable("errors.redstonemanager.manager.invalid_link");
-                                    } else {
-                                        extraLabel = cached.powered()
+                                List<Component> tooltip = new ArrayList<>(Screen.getTooltipFromItem(Minecraft.getInstance(), stack));
+                                Component stateLabel = LeverStateCache.get(leverPos, Optional.ofNullable(leverDimension))
+                                        .map(cached -> !cached.found()
+                                                ? Component.translatable("errors.redstonemanager.manager.invalid_link")
+                                                : cached.powered()
                                                 ? Component.translatable("tooltip.redstonemanager.manager.turn_off")
-                                                : Component.translatable("tooltip.redstonemanager.manager.turn_on");
-                                    }
-                                    guiGraphics.text(font, extraLabel, screenX, screenY - 12, 0xFFFFFFFF);
-                                }, () -> {
-                                    Component extraLabel = Component.translatable("tooltip.redstonemanager.manager.loading");
-                                    guiGraphics.text(font, extraLabel, screenX, screenY - 12, 0xFFFFFFFF);
-                                });
+                                                : Component.translatable("tooltip.redstonemanager.manager.turn_on"))
+                                        .orElseGet(() -> Component.translatable("tooltip.redstonemanager.manager.loading"));
+                                tooltip.add(1, stateLabel);
+                                guiGraphics.setComponentTooltipForNextFrame(font, tooltip, screenX, screenY);
                             }
                         }
                     }
@@ -339,7 +331,7 @@ public class ManagerScreen extends AbstractContainerScreen<ManagerMenu> implemen
             } else {
                 toggleTooltip = Component.translatable("tooltip.redstonemanager.manager.toggle_group_on", groupName);
             }
-            guiGraphics.text(font, toggleTooltip, screenX, screenY, 0xFFFFFFFF);
+            guiGraphics.setTooltipForNextFrame(font, toggleTooltip, screenX, screenY);
         }
     }
 
@@ -348,14 +340,14 @@ public class ManagerScreen extends AbstractContainerScreen<ManagerMenu> implemen
         guiGraphics.blit(RenderPipelines.GUI_TEXTURED, GUI_BUTTONS, startX + 70, rowY, 11, 0, 11, 11, 33, 11);
 
         if (screenX >= startX + 70 && screenX < startX + 81 && screenY >= rowY && screenY < rowY + 11) {
-            guiGraphics.text(font, Component.translatable("tooltip.redstonemanager.manager.rename_group", groupName), startX + 70, rowY + 2, 0xFFFFFFFF);
+            guiGraphics.setTooltipForNextFrame(font, Component.translatable("tooltip.redstonemanager.manager.rename_group", groupName), screenX, screenY);
         }
 
         // Delete button
         guiGraphics.blit(RenderPipelines.GUI_TEXTURED, GUI_BUTTONS, startX + 70 + 11 + 4, rowY, 22, 0, 11, 11, 33, 11);
 
         if (screenX >= startX + 70 + 11 + 4 && screenX < startX + 70 + 11 + 4 + 11 && screenY >= rowY && screenY < rowY + 11) {
-            guiGraphics.text(font, Component.translatable("tooltip.redstonemanager.manager.delete_group", groupName), startX + 70, rowY + 2, 0xFFFFFFFF);
+            guiGraphics.setTooltipForNextFrame(font, Component.translatable("tooltip.redstonemanager.manager.delete_group", groupName), screenX, screenY);
         }
     }
 
@@ -368,7 +360,7 @@ public class ManagerScreen extends AbstractContainerScreen<ManagerMenu> implemen
         if (leverPos != null) {
             LeverStateCache.requestIfNeeded(leverPos, Optional.ofNullable(leverDimension)); // Triggers request if needed
 
-            Optional<LeverStateCache.CachedLever> cached = LeverStateCache.get(leverPos);
+            Optional<LeverStateCache.CachedLever> cached = LeverStateCache.get(leverPos, Optional.ofNullable(leverDimension));
             color = cached.map(cachedLever -> cachedLever.powered() ? 0x7700FF00 : 0x77FF0000).orElse(0x77444444);
         } else {
             color = 0x77000000; // black = not linked
@@ -398,6 +390,7 @@ public class ManagerScreen extends AbstractContainerScreen<ManagerMenu> implemen
     }
 
     private void handleCreateEditGroup(String newName) {
+        newName = newName.trim();
         if (newName.isEmpty()) return;
 
         assert Minecraft.getInstance().player != null;
@@ -467,6 +460,11 @@ public class ManagerScreen extends AbstractContainerScreen<ManagerMenu> implemen
                 // Toggle all levers in the group button
                 if (mouseX >= rowX && mouseX < rowX + 20 && mouseY >= rowY && mouseY < rowY + 11) {
                     assert Minecraft.getInstance().player != null;
+                    LinkerGroup group = items.get(groupName);
+                    if (group != null) {
+                        // Give immediate feedback while the authoritative server update is in flight.
+                        group.setPowered(!group.isPowered());
+                    }
                     Minecraft.getInstance().player.connection.send(new PacketToggleAllLevers(blockEntity.getBlockPos(), groupName));
                     return true;
                 }

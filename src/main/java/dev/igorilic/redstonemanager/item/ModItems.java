@@ -8,6 +8,7 @@ import net.minecraft.core.component.DataComponents;
 import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.component.ItemContainerContents;
+import net.minecraft.world.item.component.TooltipDisplay;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.neoforge.registries.DeferredItem;
 import net.neoforged.neoforge.registries.DeferredRegister;
@@ -22,7 +23,10 @@ public class ModItems {
             ITEMS.registerItem("rm_linker", RedstoneLinkerItem::new);
 
     public static final DeferredItem<Item> RM_POUCH =
-            ITEMS.registerItem("pouch", props -> new PouchItem(props.stacksTo(1).component(DataComponents.CONTAINER, ItemContainerContents.EMPTY)));
+            ITEMS.registerItem("pouch", props -> new PouchItem(props.stacksTo(1)
+                    .component(DataComponents.CONTAINER, ItemContainerContents.EMPTY)
+                    .component(DataComponents.TOOLTIP_DISPLAY,
+                            TooltipDisplay.DEFAULT.withHidden(DataComponents.CONTAINER, true))));
 
     public static void register(IEventBus eventBus) {
         ITEMS.register(eventBus);

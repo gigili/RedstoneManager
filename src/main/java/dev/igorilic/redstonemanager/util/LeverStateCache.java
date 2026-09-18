@@ -10,16 +10,16 @@ import java.util.Map;
 import java.util.Optional;
 
 public class LeverStateCache {
-    private static final Map<BlockPos, CachedLever> leverStates = new HashMap<>();
+    private static final Map<LeverKey, CachedLever> leverStates = new HashMap<>();
 
-    public static void update(BlockPos pos, boolean found, boolean powered) {
-        leverStates.put(pos, new CachedLever(found, powered, System.currentTimeMillis()));
+    public static void update(BlockPos pos, Optional<Identifier> dimension, boolean found, boolean powered) {
+        leverStates.put(new LeverKey(pos, dimension), new CachedLever(found, powered, System.currentTimeMillis()));
     }
 
-    public static Optional<CachedLever> get(BlockPos pos) {
+    public static Optional<CachedLever> get(BlockPos pos, Optional<Identifier> dimension) {
         if (leverStates.isEmpty()) return Optional.empty();
 
-        CachedLever cached = leverStates.get(pos);
+        CachedLever cached = leverStates.get(new LeverKey(pos, dimension));
         if (cached == null || (System.currentTimeMillis() - cached.timestamp) > 60_000) {
             return Optional.empty(); // stale
         }
@@ -27,7 +27,7 @@ public class LeverStateCache {
     }
 
     public static void requestIfNeeded(BlockPos pos, Optional<Identifier> dim) {
-        if (leverStates.isEmpty() || get(pos).isEmpty()) {
+        if (leverStates.isEmpty() || get(pos, dim).isEmpty()) {
             PacketHandler.sendToServer(new PacketLeverStateRequest(pos, dim));
         }
     }
@@ -37,5 +37,8 @@ public class LeverStateCache {
     }
 
     public record CachedLever(boolean found, boolean powered, long timestamp) {
+    }
+
+    private record LeverKey(BlockPos pos, Optional<Identifier> dimension) {
     }
 }

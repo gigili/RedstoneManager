@@ -11,7 +11,9 @@ import net.minecraft.resources.Identifier;
 import net.neoforged.neoforge.network.handling.IPayloadHandler;
 import org.jetbrains.annotations.NotNull;
 
-public record PacketLeverStateResponse(BlockPos pos, boolean found, boolean powered)
+import java.util.Optional;
+
+public record PacketLeverStateResponse(BlockPos pos, Optional<Identifier> dimension, boolean found, boolean powered)
         implements CustomPacketPayload {
 
     public static final Type<PacketLeverStateResponse> TYPE = new Type<>(Identifier.fromNamespaceAndPath(RedstoneManager.MOD_ID, "lever_state_response"));
@@ -20,6 +22,8 @@ public record PacketLeverStateResponse(BlockPos pos, boolean found, boolean powe
             StreamCodec.composite(
                     BlockPos.STREAM_CODEC,
                     PacketLeverStateResponse::pos,
+                    ByteBufCodecs.optional(Identifier.STREAM_CODEC),
+                    PacketLeverStateResponse::dimension,
                     ByteBufCodecs.BOOL,
                     PacketLeverStateResponse::found,
                     ByteBufCodecs.BOOL,
@@ -33,6 +37,6 @@ public record PacketLeverStateResponse(BlockPos pos, boolean found, boolean powe
     }
 
     public static final IPayloadHandler<PacketLeverStateResponse> HANDLER = (payload, context) -> {
-        LeverStateCache.update(payload.pos(), payload.found(), payload.powered());
+        LeverStateCache.update(payload.pos(), payload.dimension(), payload.found(), payload.powered());
     };
 }

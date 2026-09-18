@@ -42,11 +42,15 @@ public class PouchItem extends Item {
             int count = 0;
             for (int i = 0; i < contents.getSlots(); i++) {
                 if (!contents.getStackInSlot(i).isEmpty()) {
-                    count++;
+                    count += contents.getStackInSlot(i).getCount();
                 }
             }
             if (count > 0) {
-                tooltipConsumer.accept(Component.translatable("tooltip.redstonemanager.pouch.contains", count));
+                if (count > 1) {
+                    tooltipConsumer.accept(Component.translatable("tooltip.redstonemanager.pouch.contains", count));
+                } else {
+                    tooltipConsumer.accept(Component.translatable("tooltip.redstonemanager.pouch.contain", count));
+                }
             }
         }
         super.appendHoverText(stack, context, tooltipDisplay, tooltipConsumer, tooltipFlag);

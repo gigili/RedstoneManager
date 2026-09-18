@@ -42,5 +42,7 @@
   "tooltip.redstonemanager.rm_linker.right_click": "Right click a block to set area corners",
   "tooltip.redstonemanager.rm_linker.shift_right_click": "Crouch + right click a block to link (or clear)",
   "gui.redstonemanager.pouch": "Pouch",
-  "tooltip.redstonemanager.pouch.store": "Store stacks of Linkers for easier bulk linking"
+  "tooltip.redstonemanager.pouch.store": "Store stacks of Linkers for easier bulk linking",
+  "tooltip.redstonemanager.pouch.contains": "Contains: %s linkers",
+  "tooltip.redstonemanager.pouch.contain": "Contains: %s linker"
 }
